@@ -12,7 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Add CORS middleware for API routes
+        // Replace default CORS middleware with our custom one
+        $middleware->remove(\Illuminate\Http\Middleware\HandleCors::class);
+        
+        // Add custom CORS middleware for API routes
         $middleware->api(prepend: [
             \App\Http\Middleware\CorsMiddleware::class,
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,

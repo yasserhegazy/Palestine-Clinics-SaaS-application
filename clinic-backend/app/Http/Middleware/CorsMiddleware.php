@@ -17,12 +17,15 @@ class CorsMiddleware
     {
         // Handle preflight OPTIONS requests
         if ($request->isMethod('OPTIONS')) {
+            $origin = $this->getAllowedOrigins($request);
+            
             return response('', 200, [
-                'Access-Control-Allow-Origin' => $this->getAllowedOrigins($request),
+                'Access-Control-Allow-Origin' => $origin,
                 'Access-Control-Allow-Methods' => 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-                'Access-Control-Allow-Headers' => 'Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-TOKEN',
+                'Access-Control-Allow-Headers' => 'Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-TOKEN, X-XSRF-TOKEN',
                 'Access-Control-Allow-Credentials' => 'true',
-                'Access-Control-Max-Age' => '86400'
+                'Access-Control-Max-Age' => '86400',
+                'Vary' => 'Origin',
             ]);
         }
 
@@ -30,9 +33,10 @@ class CorsMiddleware
 
         // Add CORS headers to actual requests
         $response->headers->set('Access-Control-Allow-Origin', $this->getAllowedOrigins($request));
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');  
-        $response->headers->set('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-TOKEN');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+        $response->headers->set('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization, X-Requested-With, X-CSRF-TOKEN, X-XSRF-TOKEN');
         $response->headers->set('Access-Control-Allow-Credentials', 'true');
+        $response->headers->set('Vary', 'Origin');
 
         return $response;
     }
@@ -44,7 +48,7 @@ class CorsMiddleware
     {
         $allowedOrigins = [
             'http://localhost:3000',      // React development
-            'http://localhost:3001',      // Next.js development  
+            'http://localhost:3001',      // Next.js development
             'http://127.0.0.1:3000',     // React development alternative
             'http://127.0.0.1:3001',     // Next.js development alternative
             'https://localhost:3000',     // HTTPS React development
@@ -58,8 +62,9 @@ class CorsMiddleware
         }
 
         $origin = $request->header('Origin');
-        
-        if (in_array($origin, $allowedOrigins)) {
+
+        // Always return the requesting origin if it's in our allowed list
+        if ($origin && in_array($origin, $allowedOrigins)) {
             return $origin;
         }
 
@@ -70,6 +75,7 @@ class CorsMiddleware
             }
         }
 
-        return $allowedOrigins[0]; // Default to first allowed origin
+        // Return the first allowed origin as fallback
+        return 'http://localhost:3000';
     }
 }
