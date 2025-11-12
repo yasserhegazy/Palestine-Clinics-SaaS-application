@@ -12,11 +12,22 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-            $middleware->alias([
-                'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
-                'auth:sanctum' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            ]);
-        //
+        // Add CORS middleware for API routes
+        $middleware->api(prepend: [
+            \App\Http\Middleware\CorsMiddleware::class,
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+        ]);
+
+        $middleware->alias([
+            'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
+            'auth:sanctum' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            'cors' => \App\Http\Middleware\CorsMiddleware::class,
+        ]);
+
+        // Configure CORS for API routes
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

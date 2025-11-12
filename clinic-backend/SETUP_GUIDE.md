@@ -44,9 +44,9 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-### 5. Configure Database
+### 5. Configure Database and CORS
 
-Edit the `.env` file and update the database configuration:
+Edit the `.env` file and update the database and CORS configuration:
 
 ```env
 DB_CONNECTION=mysql
@@ -55,6 +55,11 @@ DB_PORT=3306
 DB_DATABASE=palestine_clinics_saas
 DB_USERNAME=your_username
 DB_PASSWORD=your_password
+
+# CORS Configuration for Frontend
+SANCTUM_STATEFUL_DOMAINS=localhost:3000,localhost:3001,127.0.0.1:3000,127.0.0.1:3001
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+SESSION_DOMAIN=localhost
 ```
 
 ### 6. Generate Application Key
@@ -83,4 +88,10 @@ php artisan db:seed
 ```bash
 php artisan serve
 ```
+
+The API will be available at: `http://127.0.0.1:8000`
+
+### 11. Test CORS Configuration (Optional)
+
+Open `test_cors.html` in your browser to verify CORS is working correctly with your frontend.
 
