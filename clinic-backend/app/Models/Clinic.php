@@ -11,9 +11,11 @@ class Clinic extends Model
 
     protected $fillable = [
         'name',
+        'speciality',
         'address',
         'phone',
         'email',
+        'logo',
         'subscription_plan',
         'status',
     ];
@@ -22,6 +24,19 @@ class Clinic extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    protected $appends = ['logo_url'];
+
+    /**
+     * Get the full URL for the clinic logo
+     */
+    public function getLogoUrlAttribute(): ?string
+    {
+        if ($this->logo) {
+            return asset('storage/' . $this->logo);
+        }
+        return null;
+    }
 
     /**
      * Get all users belonging to this clinic
