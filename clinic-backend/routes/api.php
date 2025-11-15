@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\ClinicRegistrationController;
+use App\Http\Controllers\Clinic\StaffController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,10 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('clinic')->group(function () {
     // Update own clinic logo
     Route::post('/logo', [ClinicRegistrationController::class, 'updateOwnClinicLogo']);
+    
+    // Staff management
+    Route::post('/secretaries', [StaffController::class, 'addSecretary']);
+    Route::post('/doctors', [StaffController::class, 'addDoctor']);
 });
 
 Route::middleware(['auth:sanctum', 'role:Admin'])->prefix('admin')->group(function () {
