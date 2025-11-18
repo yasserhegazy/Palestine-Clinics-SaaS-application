@@ -24,16 +24,31 @@ class ClinicRegistrationController extends Controller
             'clinic.name' => 'required|string|max:100',
             'clinic.speciality' => 'nullable|string|max:100',
             'clinic.address' => 'required|string|max:255',
-            'clinic.phone' => 'required|string|max:20|regex:/^\+970[0-9]{3}[0-9]{6}$/',
+            'clinic.phone' => 'required|string|max:20',
             'clinic.email' => 'required|email|max:100|unique:clinics,email',
             'clinic.subscription_plan' => 'required|in:Basic,Standard,Premium',
 
             // Manager validation
             'manager.name' => 'required|string|max:100',
             'manager.email' => 'required|email|max:100|unique:users,email',
-            'manager.phone' => 'required|string|max:20|regex:/^\+970[0-9]{3}[0-9]{6}$/',
+            'manager.phone' => 'required|string|max:20',
             'manager.password' => 'required|string|min:8|confirmed',
         ]);
+
+        // Normalize phone numbers (add +970 if starts with 0)
+        $clinicPhone = $validated['clinic']['phone'];
+        if (str_starts_with($clinicPhone, '0')) {
+            $clinicPhone = '+970' . substr($clinicPhone, 1);
+        } else if (!str_starts_with($clinicPhone, '+')) {
+            $clinicPhone = '+970' . $clinicPhone;
+        }
+
+        $managerPhone = $validated['manager']['phone'];
+        if (str_starts_with($managerPhone, '0')) {
+            $managerPhone = '+970' . substr($managerPhone, 1);
+        } else if (!str_starts_with($managerPhone, '+')) {
+            $managerPhone = '+970' . $managerPhone;
+        }
 
         // Validate logo separately (not nested)
         if ($request->hasFile('logo')) {
@@ -49,7 +64,7 @@ class ClinicRegistrationController extends Controller
                 'name' => $validated['clinic']['name'],
                 'speciality' => $validated['clinic']['speciality'] ?? null,
                 'address' => $validated['clinic']['address'],
-                'phone' => $validated['clinic']['phone'],
+                'phone' => $clinicPhone,
                 'email' => $validated['clinic']['email'],
                 'subscription_plan' => $validated['clinic']['subscription_plan'],
                 'status' => 'Active',
@@ -70,7 +85,7 @@ class ClinicRegistrationController extends Controller
                 'clinic_id' => $clinic->clinic_id,
                 'name' => $validated['manager']['name'],
                 'email' => $validated['manager']['email'],
-                'phone' => $validated['manager']['phone'],
+                'phone' => $managerPhone,
                 'password_hash' => Hash::make($validated['manager']['password']),
                 'role' => 'Manager',
                 'status' => 'Active',

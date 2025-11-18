@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\ClinicRegistrationController;
 use App\Http\Controllers\Clinic\StaffController;
+use App\Http\Controllers\Clinic\PatientController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -21,11 +22,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 });
 
-// Manager routes (clinic-specific)
+// Manager and Secretary routes (clinic-specific)
+Route::middleware(['auth:sanctum', 'role:Manager,Secretary'])->prefix('clinic')->group(function () {
+    // Patient management
+    Route::post('/patients', [PatientController::class, 'createPatient']);
+    Route::get('/patients', [PatientController::class, 'index']);
+    Route::get('/patients/{patient_id}', [PatientController::class, 'show']);
+    Route::get('/patients/search', [PatientController::class, 'search']);
+});
+
+// Manager-only routes
 Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('clinic')->group(function () {
     // Update own clinic logo
     Route::post('/logo', [ClinicRegistrationController::class, 'updateOwnClinicLogo']);
-    
+
     // Staff management
     Route::post('/secretaries', [StaffController::class, 'addSecretary']);
     Route::post('/doctors', [StaffController::class, 'addDoctor']);
@@ -47,7 +57,7 @@ Route::middleware(['auth:sanctum', 'role:Admin'])->prefix('admin')->group(functi
     Route::get('/clinics/{clinic_id}', function ($clinic_id) {
         return response()->json(['message' => "View clinic"]);
     });
-    
+
     // Update clinic logo
     Route::post('/clinics/{clinic_id}/logo', [ClinicRegistrationController::class, 'updateLogo']);
 });

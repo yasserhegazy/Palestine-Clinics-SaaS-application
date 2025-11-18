@@ -12,21 +12,35 @@ class AuthController extends Controller
 {
     /**
      * Universal login for all user types. Uses RBAC to vary response.
+     * Accepts either email or phone number as login identifier.
      */
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'login' => 'required|string',
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)
+        // Determine if login is email or phone
+        $loginField = filter_var($request->login, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+
+        // Normalize phone number if needed (add +970 if starts with 0)
+        $loginValue = $request->login;
+        if ($loginField === 'phone') {
+            if (str_starts_with($loginValue, '0')) {
+                $loginValue = '+970' . substr($loginValue, 1);
+            } else if (!str_starts_with($loginValue, '+')) {
+                $loginValue = '+970' . $loginValue;
+            }
+        }
+
+        $user = User::where($loginField, $loginValue)
                     ->where('status', 'Active')
                     ->first();
 
         if (!$user || !Hash::check($request->password, $user->password_hash)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'login' => ['The provided credentials are incorrect.'],
             ]);
         }
 
@@ -56,6 +70,7 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        /** @var \Laravel\Sanctum\PersonalAccessToken|null $token */
         $token = $request->user()->currentAccessToken();
         if ($token) {
             $token->delete();

@@ -19,7 +19,7 @@ class StaffController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:100|unique:users,email',
-            'phone' => 'required|string|max:20|regex:/^\+970[0-9]{9}$/',
+            'phone' => 'required|string|max:20',
         ]);
 
         $user = $request->user();
@@ -31,6 +31,14 @@ class StaffController extends Controller
             ], 403);
         }
 
+        // Normalize phone number (add +970 if starts with 0)
+        $phone = $validated['phone'];
+        if (str_starts_with($phone, '0')) {
+            $phone = '+970' . substr($phone, 1);
+        } else if (!str_starts_with($phone, '+')) {
+            $phone = '+970' . $phone;
+        }
+
         try {
             // Default password for all new users
             $defaultPassword = '12345678';
@@ -40,7 +48,7 @@ class StaffController extends Controller
                 'clinic_id' => $user->clinic_id,
                 'name' => $validated['name'],
                 'email' => $validated['email'],
-                'phone' => $validated['phone'],
+                'phone' => $phone,
                 'password_hash' => Hash::make($defaultPassword),
                 'role' => 'Secretary',
                 'status' => 'Active',
@@ -68,7 +76,7 @@ class StaffController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:100|unique:users,email',
-            'phone' => 'required|string|max:20|regex:/^\+970[0-9]{9}$/',
+            'phone' => 'required|string|max:20',
             'specialization' => 'required|string|max:100',
             'available_days' => 'required|string|max:100',
             'clinic_room' => 'required|string|max:50',
@@ -83,6 +91,14 @@ class StaffController extends Controller
             ], 403);
         }
 
+        // Normalize phone number (add +970 if starts with 0)
+        $phone = $validated['phone'];
+        if (str_starts_with($phone, '0')) {
+            $phone = '+970' . substr($phone, 1);
+        } else if (!str_starts_with($phone, '+')) {
+            $phone = '+970' . $phone;
+        }
+
         DB::beginTransaction();
 
         try {
@@ -94,7 +110,7 @@ class StaffController extends Controller
                 'clinic_id' => $user->clinic_id,
                 'name' => $validated['name'],
                 'email' => $validated['email'],
-                'phone' => $validated['phone'],
+                'phone' => $phone,
                 'password_hash' => Hash::make($defaultPassword),
                 'role' => 'Doctor',
                 'status' => 'Active',
