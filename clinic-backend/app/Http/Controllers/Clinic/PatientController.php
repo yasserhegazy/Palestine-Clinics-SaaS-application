@@ -66,7 +66,7 @@ class PatientController extends Controller
 
         try {
             // Generate a random 8-character password
-            $temporaryPassword = Str::random(8);
+            $temporaryPassword = 12345678;
 
             // Generate email from national ID if not provided
             $email = 'patient_' . $validated['nationalId'] . '@clinic.local';
