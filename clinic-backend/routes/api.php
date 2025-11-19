@@ -27,8 +27,9 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary'])->prefix('clinic')-
     // Patient management
     Route::post('/patients', [PatientController::class, 'createPatient']);
     Route::get('/patients', [PatientController::class, 'index']);
-    Route::get('/patients/{patient_id}', [PatientController::class, 'show']);
     Route::get('/patients/search', [PatientController::class, 'search']);
+    Route::get('/patients/lookup', [PatientController::class, 'searchByIdentifier']);
+    Route::get('/patients/{patient_id}', [PatientController::class, 'show']);
 });
 
 // Manager-only routes

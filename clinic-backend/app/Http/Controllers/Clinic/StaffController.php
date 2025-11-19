@@ -31,13 +31,7 @@ class StaffController extends Controller
             ], 403);
         }
 
-        // Normalize phone number (add +970 if starts with 0)
-        $phone = $validated['phone'];
-        if (str_starts_with($phone, '0')) {
-            $phone = '+970' . substr($phone, 1);
-        } else if (!str_starts_with($phone, '+')) {
-            $phone = '+970' . $phone;
-        }
+        $phone = $this->normalizePhoneNumber($validated['phone']);
 
         try {
             // Default password for all new users
@@ -91,13 +85,7 @@ class StaffController extends Controller
             ], 403);
         }
 
-        // Normalize phone number (add +970 if starts with 0)
-        $phone = $validated['phone'];
-        if (str_starts_with($phone, '0')) {
-            $phone = '+970' . substr($phone, 1);
-        } else if (!str_starts_with($phone, '+')) {
-            $phone = '+970' . $phone;
-        }
+        $phone = $this->normalizePhoneNumber($validated['phone']);
 
         DB::beginTransaction();
 
@@ -144,5 +132,27 @@ class StaffController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Normalize phone numbers to the +970 format used in the database
+     */
+    private function normalizePhoneNumber(string $phone): string
+    {
+        $phone = trim($phone);
+
+        if ($phone === '') {
+            return $phone;
+        }
+
+        if (str_starts_with($phone, '0')) {
+            return '+970' . substr($phone, 1);
+        }
+
+        if (!str_starts_with($phone, '+')) {
+            return '+970' . $phone;
+        }
+
+        return $phone;
     }
 }

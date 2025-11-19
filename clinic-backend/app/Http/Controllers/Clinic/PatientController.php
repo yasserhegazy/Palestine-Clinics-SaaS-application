@@ -39,13 +39,7 @@ class PatientController extends Controller
 
         $user = $request->user();
 
-        // Normalize phone number (add +970 if starts with 0)
-        $phone = $validated['phone'];
-        if (str_starts_with($phone, '0')) {
-            $phone = '+970' . substr($phone, 1);
-        } else if (!str_starts_with($phone, '+')) {
-            $phone = '+970' . $phone;
-        }
+        $phone = $this->normalizePhoneNumber($validated['phone']);
 
         // Ensure user (Secretary/Manager) has a clinic
         if (!$user->clinic_id) {
@@ -199,5 +193,108 @@ class PatientController extends Controller
             ->get();
 
         return response()->json($patients);
+    }
+
+    /**
+     * Search for patients using a single identifier field (national ID or phone prefix)
+     */
+    public function searchByIdentifier(Request $request)
+    {
+        $validated = $request->validate([
+            'identifier' => 'required|string|min:3|max:25',
+        ]);
+
+        $user = $request->user();
+
+        if (!$user->clinic_id) {
+            return response()->json([
+                'message' => 'You are not associated with any clinic',
+            ], 403);
+        }
+
+        $identifier = trim($validated['identifier']);
+        $phoneFragments = $this->buildPhoneSearchFragments($identifier);
+
+        $patients = Patient::with('user')
+            ->whereHas('user', function ($query) use ($user) {
+                $query->where('clinic_id', $user->clinic_id);
+            })
+            ->where(function ($query) use ($identifier, $phoneFragments) {
+                $query->where('national_id', 'like', "{$identifier}%")
+                      ->orWhereHas('user', function ($userQuery) use ($identifier, $phoneFragments) {
+                          $userQuery->where(function ($phoneMatch) use ($identifier, $phoneFragments) {
+                              $phoneMatch->where('phone', 'like', "{$identifier}%");
+                              foreach ($phoneFragments as $fragment) {
+                                  $phoneMatch->orWhere('phone', 'like', "{$fragment}%");
+                              }
+                          });
+                      });
+            })
+            ->orderBy('patients.created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'patients' => $patients,
+        ]);
+    }
+
+    /**
+     * Normalize phone numbers to the +970 format
+     */
+    private function normalizePhoneNumber(string $phone): string
+    {
+        $phone = trim($phone);
+
+        if ($phone === '') {
+            return $phone;
+        }
+
+        if (str_starts_with($phone, '0')) {
+            return '+970' . substr($phone, 1);
+        }
+
+        if (!str_starts_with($phone, '+')) {
+            return '+970' . $phone;
+        }
+
+        return $phone;
+    }
+
+    /**
+     * Build phone fragments to allow loose matching for lookup
+     */
+    private function buildPhoneSearchFragments(string $identifier): array
+    {
+        $fragments = [];
+        $trimmed = trim($identifier);
+
+        if ($trimmed !== '') {
+            $fragments[] = $trimmed;
+        }
+
+        $normalized = $this->normalizePhoneNumber($trimmed);
+        if ($normalized !== '' && $normalized !== $trimmed) {
+            $fragments[] = $normalized;
+        }
+
+        $digitsOnly = preg_replace('/\D+/', '', $trimmed);
+        if (!empty($digitsOnly)) {
+            $fragments[] = $digitsOnly;
+
+            if (str_starts_with($digitsOnly, '970')) {
+                $fragments[] = '+' . $digitsOnly;
+                $fragments[] = '0' . substr($digitsOnly, 3);
+            } elseif (str_starts_with($digitsOnly, '0')) {
+                $fragments[] = '+970' . substr($digitsOnly, 1);
+            } else {
+                $fragments[] = '+970' . $digitsOnly;
+                $fragments[] = '0' . $digitsOnly;
+            }
+        }
+
+        return array_values(array_unique(array_filter($fragments, function ($fragment) {
+            return $fragment !== null && $fragment !== '';
+        })));
     }
 }
