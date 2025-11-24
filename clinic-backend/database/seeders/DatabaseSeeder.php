@@ -60,6 +60,14 @@ class DatabaseSeeder extends Seeder
             'status' => 'Active'
         ]);
 
+        // Create doctor record
+        $doctor = \App\Models\Doctor::create([
+            'user_id' => $doctorUser->user_id,
+            'specialization' => 'Cardiology',
+            'available_days' => json_encode(['Monday', 'Wednesday', 'Friday']),
+            'clinic_room' => 'Room 101',
+        ]);
+
         // Create a patient user
         $patientUser = User::create([
             'clinic_id' => $clinic->clinic_id,
@@ -71,6 +79,17 @@ class DatabaseSeeder extends Seeder
             'status' => 'Active'
         ]);
 
+        // Create patient record
+        $patient = \App\Models\Patient::create([
+            'user_id' => $patientUser->user_id,
+            'national_id' => '123456789',
+            'date_of_birth' => '1990-05-15',
+            'gender' => 'Male',
+            'address' => 'Gaza City, Palestine',
+            'blood_type' => 'A+',
+            'allergies' => null,
+        ]);
+
         // Create secretary user
         User::create([
             'clinic_id' => $clinic->clinic_id,
@@ -80,6 +99,37 @@ class DatabaseSeeder extends Seeder
             'password_hash' => Hash::make('secretary123'),
             'role' => 'Secretary',
             'status' => 'Active'
+        ]);
+
+        // Create sample appointments for the patient
+        \App\Models\Appointment::create([
+            'clinic_id' => $clinic->clinic_id,
+            'doctor_id' => $doctor->doctor_id,
+            'patient_id' => $patient->patient_id,
+            'secretary_id' => null,
+            'appointment_date' => now()->addDays(7)->setTime(9, 30),
+            'status' => 'Approved',
+            'notes' => 'Regular checkup',
+        ]);
+
+        \App\Models\Appointment::create([
+            'clinic_id' => $clinic->clinic_id,
+            'doctor_id' => $doctor->doctor_id,
+            'patient_id' => $patient->patient_id,
+            'secretary_id' => null,
+            'appointment_date' => now()->addDays(14)->setTime(11, 0),
+            'status' => 'Requested',
+            'notes' => 'Follow-up appointment',
+        ]);
+
+        \App\Models\Appointment::create([
+            'clinic_id' => $clinic->clinic_id,
+            'doctor_id' => $doctor->doctor_id,
+            'patient_id' => $patient->patient_id,
+            'secretary_id' => null,
+            'appointment_date' => now()->subDays(10)->setTime(16, 0),
+            'status' => 'Completed',
+            'notes' => 'Initial consultation',
         ]);
     }
 }
