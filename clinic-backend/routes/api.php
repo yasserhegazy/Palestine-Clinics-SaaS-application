@@ -22,6 +22,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 });
 
+// Patient routes
+Route::middleware(['auth:sanctum', 'role:Patient'])->prefix('patient')->group(function () {
+    // Appointment management
+    Route::post('/appointments', [\App\Http\Controllers\Patient\AppointmentController::class, 'createAppointment']);
+    Route::get('/appointments', [\App\Http\Controllers\Patient\AppointmentController::class, 'index']);
+    Route::get('/appointments/upcoming', [\App\Http\Controllers\Patient\AppointmentController::class, 'upcoming']);
+    Route::get('/appointments/{appointment_id}', [\App\Http\Controllers\Patient\AppointmentController::class, 'show']);
+    Route::post('/appointments/{appointment_id}/cancel', [\App\Http\Controllers\Patient\AppointmentController::class, 'cancel']);
+    
+    // Get available doctors
+    Route::get('/doctors', [\App\Http\Controllers\Patient\AppointmentController::class, 'getAvailableDoctors']);
+});
+
 // Manager and Secretary routes (clinic-specific)
 Route::middleware(['auth:sanctum', 'role:Manager,Secretary'])->prefix('clinic')->group(function () {
     // Patient management
