@@ -61,6 +61,7 @@ Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('clinic')->group(fun
     Route::post('/doctors', [StaffController::class, 'addDoctor']);
     Route::get('/staff', [StaffController::class, 'index']);
     Route::put('/staff/{user_id}', [StaffController::class, 'update_member']);
+    Route::delete('/staff/{user_id}', [StaffController::class, 'delete_member']);
 });
 
 Route::middleware(['auth:sanctum', 'role:Admin'])->prefix('admin')->group(function () {

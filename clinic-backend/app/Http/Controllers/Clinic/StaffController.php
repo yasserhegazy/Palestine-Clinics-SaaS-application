@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Clinic;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Doctor;
+use App\Models\Appointment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -240,6 +241,48 @@ class StaffController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function delete_member(Request $request, $user_id)
+    {
+        $authenticatedUser = $request->user();
+
+        // Ensure manager has a clinic
+        if (!$authenticatedUser->clinic_id) {
+            return response()->json([
+                'message' => 'You are not associated with any clinic',
+            ], 403);
+        }
+
+        // Find the member to delete
+        $member = User::findOrFail($user_id);
+
+        // Verify the member belongs to the same clinic
+        if ($member->clinic_id !== $authenticatedUser->clinic_id) {
+            return response()->json([
+                'message' => 'You do not have permission to delete this member',
+            ], 403);
+        }
+
+        // Prevent deleting managers or the authenticated user themselves
+        if ($member->role === 'Manager') {
+            return response()->json([
+                'message' => 'Cannot delete a manager account',
+            ], 403);
+        }
+
+        if ($member->user_id === $authenticatedUser->user_id) {
+            return response()->json([
+                'message' => 'You cannot delete your own account',
+            ], 403);
+        }
+
+        // Soft delete the member (data is preserved and can be restored)
+        $member->delete();
+
+        return response()->json([
+            'message' => 'Staff member deleted successfully',
+        ], 200);
     }
 
     /**
