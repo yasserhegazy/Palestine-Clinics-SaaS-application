@@ -49,6 +49,7 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary'])->prefix('clinic')-
 Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(function () {
     // Appointment requests
     Route::get('/appointments', [AppointmentRequestsController::class, 'index']);
+    Route::put('/appointments/approve/{appointment_id}', [AppointmentRequestsController::class, 'approve']);
 });
 // Manager-only routes
 Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('clinic')->group(function () {

@@ -40,4 +40,53 @@ class AppointmentRequestsController extends Controller
             'appointments' => $appointments,
         ], 200);
     }
+    public function approve(Request $request, $appointment_id)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'Doctor') {
+            return response()->json([
+                'message' => 'Only doctors can approve appointment requests',
+            ], 403);
+        }
+
+        // Get the doctor record
+        $doctor = Doctor::where('user_id', $user->user_id)->first();
+        
+        if (!$doctor) {
+            return response()->json([
+                'message' => 'Doctor profile not found',
+            ], 404);
+        }
+
+        // Use the route parameter, not $request->appointment_id
+        $appointment = Appointment::findOrFail($appointment_id);
+
+        // Check if appointment belongs to this doctor
+        if ($appointment->doctor_id !== $doctor->doctor_id) {
+            return response()->json([
+                'message' => 'You do not have permission to approve this appointment request',
+            ], 403);
+        }
+
+        // Validate that the appointment is in "Requested" status
+        if ($appointment->status !== 'Requested') {
+            return response()->json([
+                'message' => 'Only appointments with "Requested" status can be approved',
+                'current_status' => $appointment->status,
+            ], 400);
+        }
+
+        // Approve the appointment
+        $appointment->status = 'Approved';
+        $appointment->save();
+
+        // Load relationships for the response
+        $appointment->load(['patient.user', 'clinic']);
+
+        return response()->json([
+            'message' => 'Appointment request approved successfully',
+            'appointment' => $appointment,
+        ], 200);
+    }
 }
