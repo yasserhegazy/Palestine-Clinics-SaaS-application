@@ -134,6 +134,28 @@ class StaffController extends Controller
         }
     }
 
+    public function index(Request $request)
+    {
+        $authenticatedUser = $request->user();
+
+        // Ensure manager has a clinic
+        if (!$authenticatedUser->clinic_id) {
+            return response()->json([
+                'message' => 'You are not associated with any clinic',
+            ], 403);
+        }
+
+        // Get all staff members in the clinic
+        $members = User::where('clinic_id', $authenticatedUser->clinic_id)
+            ->where('role', '!=', 'Manager')
+            ->with('clinic')
+            ->get();
+
+        return response()->json([
+            'members' => $members,
+        ], 200);
+    }
+
     public function update_member(Request $request, $user_id)
     {
         $authenticatedUser = $request->user();

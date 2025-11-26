@@ -59,6 +59,7 @@ Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('clinic')->group(fun
     // Staff management
     Route::post('/secretaries', [StaffController::class, 'addSecretary']);
     Route::post('/doctors', [StaffController::class, 'addDoctor']);
+    Route::get('/staff', [StaffController::class, 'index']);
     Route::put('/staff/{user_id}', [StaffController::class, 'update_member']);
 });
 
