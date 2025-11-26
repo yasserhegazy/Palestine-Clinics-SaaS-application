@@ -134,6 +134,92 @@ class StaffController extends Controller
         }
     }
 
+    public function update_member(Request $request, $user_id)
+    {
+        $authenticatedUser = $request->user();
+
+        // Ensure manager has a clinic
+        if (!$authenticatedUser->clinic_id) {
+            return response()->json([
+                'message' => 'You are not associated with any clinic',
+            ], 403);
+        }
+
+        // Find the member to update
+        $member = User::findOrFail($user_id);
+
+        // Verify the member belongs to the same clinic
+        if ($member->clinic_id !== $authenticatedUser->clinic_id) {
+            return response()->json([
+                'message' => 'You do not have permission to update this member',
+            ], 403);
+        }
+
+        // Validate based on role
+        $rules = [
+            'name' => 'required|string|max:100',
+            'email' => "required|email|max:100|unique:users,email,{$user_id},user_id",
+            'phone' => 'required|string|max:20',
+        ];
+
+        // Add doctor-specific validation if updating a doctor
+        if ($member->role === 'Doctor') {
+            $rules['specialization'] = 'sometimes|string|max:100';
+            $rules['available_days'] = 'sometimes|string|max:100';
+            $rules['clinic_room'] = 'sometimes|string|max:50';
+        }
+
+        $validated = $request->validate($rules);
+
+        DB::beginTransaction();
+
+        try {
+            // Update user information
+            $member->update([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $this->normalizePhoneNumber($validated['phone']),
+            ]);
+
+            // Update doctor-specific information if applicable
+            if ($member->role === 'Doctor' && $member->doctor) {
+                $doctorData = [];
+                
+                if (isset($validated['specialization'])) {
+                    $doctorData['specialization'] = $validated['specialization'];
+                }
+                if (isset($validated['available_days'])) {
+                    $doctorData['available_days'] = $validated['available_days'];
+                }
+                if (isset($validated['clinic_room'])) {
+                    $doctorData['clinic_room'] = $validated['clinic_room'];
+                }
+
+                if (!empty($doctorData)) {
+                    $member->doctor->update($doctorData);
+                }
+            }
+
+            DB::commit();
+
+            // Reload relationships
+            $member->load('doctor');
+
+            return response()->json([
+                'message' => 'Staff member updated successfully',
+                'user' => $member,
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to update staff member',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     /**
      * Normalize phone numbers to the +970 format used in the database
      */
