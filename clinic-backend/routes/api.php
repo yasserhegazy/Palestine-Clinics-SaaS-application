@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\ClinicRegistrationController;
 use App\Http\Controllers\Clinic\StaffController;
 use App\Http\Controllers\Clinic\PatientController;
+use App\Http\Controllers\Doctor\AppointmentRequestsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -45,6 +46,10 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary'])->prefix('clinic')-
     Route::get('/patients/{patient_id}', [PatientController::class, 'show']);
 });
 
+Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(function () {
+    // Appointment requests
+    Route::get('/appointments', [AppointmentRequestsController::class, 'index']);
+});
 // Manager-only routes
 Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('clinic')->group(function () {
     // Update own clinic logo
