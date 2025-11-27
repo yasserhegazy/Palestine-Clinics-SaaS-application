@@ -34,6 +34,10 @@ Route::middleware(['auth:sanctum', 'role:Patient'])->prefix('patient')->group(fu
     
     // Get available doctors
     Route::get('/doctors', [\App\Http\Controllers\Patient\AppointmentController::class, 'getAvailableDoctors']);
+    
+    // Medical Records (read-only for patients)
+    Route::get('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'index']);
+    Route::get('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'show']);
 });
 
 // Manager and Secretary routes (clinic-specific)
@@ -50,6 +54,13 @@ Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(func
     // Appointment requests
     Route::get('/appointments', [AppointmentRequestsController::class, 'index']);
     Route::put('/appointments/approve/{appointment_id}', [AppointmentRequestsController::class, 'approve']);
+    
+    // Medical Records (full CRUD for doctors)
+    Route::get('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'index']);
+    Route::post('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'store']);
+    Route::get('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'show']);
+    Route::put('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'update']);
+    Route::delete('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'destroy']);
 });
 // Manager-only routes
 Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('clinic')->group(function () {
