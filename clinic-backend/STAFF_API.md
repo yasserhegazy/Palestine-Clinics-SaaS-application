@@ -148,7 +148,6 @@ Updates information for an existing staff member.
 | `phone`          | `string` | Yes      | Phone number                         |
 | `specialization` | `string` | No       | (Doctor only) Medical specialization |
 | `available_days` | `string` | No       | (Doctor only) Working days           |
-| `clinic_room`    | `string` | No       | (Doctor only) Room number            |
 
 ### Success Response (200 OK)
 
