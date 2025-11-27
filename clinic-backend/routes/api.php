@@ -54,6 +54,7 @@ Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(func
     // Appointment requests
     Route::get('/appointments', [AppointmentRequestsController::class, 'index']);
     Route::put('/appointments/approve/{appointment_id}', [AppointmentRequestsController::class, 'approve']);
+    Route::put('/appointments/reject/{appointment_id}', [AppointmentRequestsController::class, 'reject']);
     
     // Medical Records (full CRUD for doctors)
     Route::get('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'index']);

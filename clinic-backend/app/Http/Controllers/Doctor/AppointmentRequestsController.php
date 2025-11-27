@@ -89,4 +89,60 @@ class AppointmentRequestsController extends Controller
             'appointment' => $appointment,
         ], 200);
     }
+    
+    public function reject(Request $request, $appointment_id)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'Doctor') {
+            return response()->json([
+                'message' => 'Only doctors can reject appointment requests',
+            ], 403);
+        }
+
+        // Get the doctor record
+        $doctor = Doctor::where('user_id', $user->user_id)->first();
+        
+        if (!$doctor) {
+            return response()->json([
+                'message' => 'Doctor profile not found',
+            ], 404);
+        }
+
+        // Validate rejection reason
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        // Use the route parameter, not $request->appointment_id
+        $appointment = Appointment::findOrFail($appointment_id);
+
+        // Check if appointment belongs to this doctor
+        if ($appointment->doctor_id !== $doctor->doctor_id) {
+            return response()->json([
+                'message' => 'You do not have permission to reject this appointment request',
+            ], 403);
+        }
+
+        // Validate that the appointment is in "Requested" status
+        if ($appointment->status !== 'Requested') {
+            return response()->json([
+                'message' => 'Only appointments with "Requested" status can be rejected',
+                'current_status' => $appointment->status,
+            ], 400);
+        }
+
+        // Reject the appointment (use 'Cancelled' status, not 'Rejected')
+        $appointment->status = 'Cancelled';
+        $appointment->rejection_reason = $validated['rejection_reason'];
+        $appointment->save();
+
+        // Load relationships for the response
+        $appointment->load(['patient.user', 'clinic']);
+
+        return response()->json([
+            'message' => 'Appointment request rejected successfully',
+            'appointment' => $appointment,
+        ], 200);
+    }
 }
