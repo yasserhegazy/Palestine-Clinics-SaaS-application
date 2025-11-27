@@ -146,14 +146,36 @@ class StaffController extends Controller
             ], 403);
         }
 
-        // Get all staff members in the clinic
+        // Get all staff members in the clinic with doctor relationship
         $members = User::where('clinic_id', $authenticatedUser->clinic_id)
-            ->where('role', '!=', 'Manager')
-            ->with('clinic')
+            ->whereNotIn('role', ['Manager', 'Patient'])
+            ->with(['clinic', 'doctor'])
             ->get();
 
+        // Transform the data to include doctor-specific fields
+        $transformedMembers = $members->map(function ($member) {
+            $data = [
+                'user_id' => $member->user_id,
+                'clinic_id' => $member->clinic_id,
+                'name' => $member->name,
+                'email' => $member->email,
+                'phone' => $member->phone,
+                'role' => $member->role,
+                'status' => $member->status,
+                'created_at' => $member->created_at,
+            ];
+
+            // Add doctor-specific fields if the user is a doctor
+            if ($member->role === 'Doctor' && $member->doctor) {
+                $data['specialization'] = $member->doctor->specialization;
+                $data['available_days'] = $member->doctor->available_days;
+            }
+
+            return $data;
+        });
+
         return response()->json([
-            'members' => $members,
+            'members' => $transformedMembers,
         ], 200);
     }
 
