@@ -103,3 +103,67 @@ Approves a specific appointment request.
     -   User is not a doctor.
     -   Appointment belongs to another doctor.
 -   **404 Not Found:** Appointment ID does not exist.
+
+---
+
+## 3. Reject Appointment Request
+
+Rejects a specific appointment request with a reason.
+
+-   **URL:** `/api/doctor/appointments/reject/{appointment_id}`
+-   **Method:** `PUT`
+-   **Role Required:** Doctor
+
+### URL Parameters
+
+| Parameter        | Type      | Description                         |
+| :--------------- | :-------- | :---------------------------------- |
+| `appointment_id` | `integer` | The ID of the appointment to reject |
+
+### Request Body
+
+| Field              | Type     | Required | Description                          |
+| :----------------- | :------- | :------- | :----------------------------------- |
+| `rejection_reason` | `string` | Yes      | Reason for rejection (max 500 chars) |
+
+### Example Request
+
+```json
+{
+    "rejection_reason": "Doctor is on vacation during the requested date"
+}
+```
+
+### Success Response (200 OK)
+
+```json
+{
+    "message": "Appointment request rejected successfully",
+    "appointment": {
+        "appointment_id": 1,
+        "status": "Cancelled",
+        "rejection_reason": "Doctor is on vacation during the requested date",
+        "appointment_date": "2025-11-30T10:00:00.000000Z",
+        "patient": {
+            "user": {
+                "name": "John Doe"
+            }
+        },
+        "clinic": {
+            "name": "Main Health Clinic"
+        }
+        // ... other appointment fields
+    }
+}
+```
+
+### Error Responses
+
+-   **400 Bad Request:**
+    -   Appointment is not in "Requested" status.
+    -   Response includes `current_status`.
+    -   Missing or invalid `rejection_reason`.
+-   **403 Forbidden:**
+    -   User is not a doctor.
+    -   Appointment belongs to another doctor.
+-   **404 Not Found:** Appointment ID does not exist.
