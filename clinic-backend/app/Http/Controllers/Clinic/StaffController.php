@@ -169,6 +169,7 @@ class StaffController extends Controller
             if ($member->role === 'Doctor' && $member->doctor) {
                 $data['specialization'] = $member->doctor->specialization;
                 $data['available_days'] = $member->doctor->available_days;
+                $data['clinic_room'] = $member->doctor->clinic_room;
             }
 
             return $data;

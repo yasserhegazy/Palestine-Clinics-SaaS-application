@@ -167,3 +167,70 @@ Rejects a specific appointment request with a reason.
     -   User is not a doctor.
     -   Appointment belongs to another doctor.
 -   **404 Not Found:** Appointment ID does not exist.
+
+---
+
+## 4. Reschedule Appointment
+
+Reschedules an existing appointment to a new date and time. The appointment status is automatically set to "Approved".
+
+-   **URL:** `/api/doctor/appointments/reschedule/{appointment_id}`
+-   **Method:** `PUT`
+-   **Role Required:** Doctor
+
+### URL Parameters
+
+| Parameter        | Type      | Description                             |
+| :--------------- | :-------- | :-------------------------------------- |
+| `appointment_id` | `integer` | The ID of the appointment to reschedule |
+
+### Request Body
+
+| Field              | Type     | Required | Description                                                       |
+| :----------------- | :------- | :------- | :---------------------------------------------------------------- |
+| `appointment_date` | `date`   | Yes      | New appointment date (format: YYYY-MM-DD, must be today or later) |
+| `appointment_time` | `string` | Yes      | New appointment time (e.g., "10:00 AM")                           |
+
+### Example Request
+
+```json
+{
+    "appointment_date": "2025-12-05",
+    "appointment_time": "02:00 PM"
+}
+```
+
+### Success Response (200 OK)
+
+```json
+{
+    "message": "Appointment rescheduled successfully",
+    "appointment": {
+        "appointment_id": 1,
+        "status": "Approved",
+        "appointment_date": "2025-12-05T14:00:00.000000Z",
+        "appointment_time": "02:00 PM",
+        "patient": {
+            "user": {
+                "name": "John Doe"
+            }
+        },
+        "clinic": {
+            "name": "Main Health Clinic"
+        }
+        // ... other appointment fields
+    }
+}
+```
+
+### Error Responses
+
+-   **403 Forbidden:**
+    -   User is not a doctor.
+    -   Appointment belongs to another doctor.
+-   **404 Not Found:**
+    -   Appointment ID does not exist.
+    -   Doctor profile not found.
+-   **422 Unprocessable Entity:**
+    -   Invalid date format.
+    -   Date is in the past.

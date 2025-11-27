@@ -145,4 +145,46 @@ class AppointmentRequestsController extends Controller
             'appointment' => $appointment,
         ], 200);
     }
+
+    public function reschedule(Request $request, $appointment_id)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'Doctor') {
+            return response()->json([
+                'message' => 'Only doctors can reschedule appointment requests',
+            ], 403);
+        } 
+        
+        $doctor = $user->doctor;
+        
+        if (!$doctor) {
+            return response()->json([
+                'message' => 'Doctor profile not found',
+            ], 404);
+        }
+
+        $appointment = Appointment::findOrFail($appointment_id);
+
+        if ($appointment->doctor_id !== $doctor->doctor_id) {
+            return response()->json([
+                'message' => 'You do not have permission to reschedule this appointment request',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'appointment_date' => 'required|date|after_or_equal:today',
+            'appointment_time' => 'required|string',
+        ]);
+
+        $appointment->appointment_date = $validated['appointment_date'];
+        $appointment->appointment_time = $validated['appointment_time'];
+        $appointment->status = 'Approved'; 
+        $appointment->save();
+
+        return response()->json([
+            'message' => 'Appointment rescheduled successfully',
+            'appointment' => $appointment,
+        ], 200);
+    }
 }
