@@ -38,6 +38,9 @@ Route::middleware(['auth:sanctum', 'role:Patient'])->prefix('patient')->group(fu
     // Medical Records (read-only for patients)
     Route::get('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'index']);
     Route::get('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'show']);
+
+    // Dashboard Stats
+    Route::get('/dashboard/stats', [\App\Http\Controllers\Patient\DashboardController::class, 'stats']);
 });
 
 // Manager and Secretary routes (clinic-specific)
