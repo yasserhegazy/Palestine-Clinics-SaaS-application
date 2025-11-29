@@ -38,7 +38,8 @@ class AppointmentController extends Controller
         // Validate request
         $validated = $request->validate([
             'doctor_id' => 'required|integer|exists:doctors,doctor_id',
-            'appointment_date' => 'required|date|after:now',
+            'appointment_date' => 'required|date|after_or_equal:today',
+            'appointment_time' => 'required|date_format:H:i',
             'notes' => 'nullable|string|max:500',
         ]);
 
@@ -54,15 +55,16 @@ class AppointmentController extends Controller
         DB::beginTransaction();
 
         try {
-            // Check for conflicting appointments for the same doctor at the same time
+            // Check for conflicting appointments for the same doctor at the same date and time
             $existingAppointment = Appointment::where('doctor_id', $validated['doctor_id'])
                 ->where('appointment_date', $validated['appointment_date'])
+                ->where('appointment_time', $validated['appointment_time'])
                 ->whereIn('status', ['Requested', 'Pending Doctor Approval', 'Approved'])
                 ->first();
 
             if ($existingAppointment) {
                 throw ValidationException::withMessages([
-                    'appointment_date' => ['This time slot is already booked. Please choose another time.'],
+                    'appointment_time' => ['This time slot is already booked. Please choose another time.'],
                 ]);
             }
 
@@ -73,6 +75,7 @@ class AppointmentController extends Controller
                 'patient_id' => $patient->patient_id,
                 'secretary_id' => null, // Patient creates their own appointment
                 'appointment_date' => $validated['appointment_date'],
+                'appointment_time' => $validated['appointment_time'],
                 'status' => 'Requested',
                 'notes' => $validated['notes'] ?? null,
             ]);

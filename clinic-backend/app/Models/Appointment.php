@@ -15,13 +15,14 @@ class Appointment extends Model
         'patient_id',
         'secretary_id',
         'appointment_date',
+        'appointment_time',
         'status',
         'notes',
         'rejection_reason',
     ];
 
     protected $casts = [
-        'appointment_date' => 'datetime',
+        'appointment_date' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

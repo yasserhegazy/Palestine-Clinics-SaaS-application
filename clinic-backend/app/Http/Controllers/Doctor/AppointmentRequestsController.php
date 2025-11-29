@@ -174,7 +174,7 @@ class AppointmentRequestsController extends Controller
 
         $validated = $request->validate([
             'appointment_date' => 'required|date|after_or_equal:today',
-            'appointment_time' => 'required|string',
+            'appointment_time' => 'required|date_format:H:i',
         ]);
 
         $appointment->appointment_date = $validated['appointment_date'];
