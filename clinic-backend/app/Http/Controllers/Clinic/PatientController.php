@@ -318,13 +318,13 @@ class PatientController extends Controller
             ->firstOrFail();
 
         $history = \App\Models\MedicalRecord::where('patient_id', $id)
-            ->with(['doctor.user', 'clinic'])
+            ->with(['doctor.user', 'patient.user.clinic'])
             ->orderBy('visit_date', 'desc')
             ->get()
             ->map(function ($record) {
                 return [
                     'date' => $record->visit_date->format('Y-m-d'),
-                    'clinic' => $record->clinic()->name ?? 'General Clinic',
+                    'clinic' => $record->patient->user->clinic->name ?? 'General Clinic',
                     'diagnosis' => $record->diagnosis,
                     'doctor' => $record->doctor->user->name,
                 ];

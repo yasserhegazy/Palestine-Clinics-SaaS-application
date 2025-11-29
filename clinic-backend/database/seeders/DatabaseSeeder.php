@@ -131,6 +131,36 @@ class DatabaseSeeder extends Seeder
             'status' => 'Completed',
             'notes' => 'Initial consultation',
         ]);
+        // Create medical history for the patient
+        \App\Models\MedicalRecord::create([
+            'patient_id' => $patient->patient_id,
+            'doctor_id' => $doctor->doctor_id,
+            'visit_date' => now()->subMonths(3)->subDays(5),
+            'symptoms' => 'Persistent skin rash and itching',
+            'diagnosis' => 'Chronic skin allergy',
+            'prescription' => 'Antihistamines and topical cream',
+            'next_visit' => now()->subMonths(2),
+        ]);
+
+        \App\Models\MedicalRecord::create([
+            'patient_id' => $patient->patient_id,
+            'doctor_id' => $doctor->doctor_id,
+            'visit_date' => now()->subMonths(6),
+            'symptoms' => 'Blurred vision and headaches',
+            'diagnosis' => 'Mild myopia',
+            'prescription' => 'Prescription glasses',
+            'next_visit' => null,
+        ]);
+
+        \App\Models\MedicalRecord::create([
+            'patient_id' => $patient->patient_id,
+            'doctor_id' => $doctor->doctor_id,
+            'visit_date' => now()->subYear(),
+            'symptoms' => 'Toothache and sensitivity',
+            'diagnosis' => 'Tooth decay',
+            'prescription' => 'Dental filling and painkillers',
+            'next_visit' => null,
+        ]);
     }
 }
 
