@@ -297,4 +297,39 @@ class PatientController extends Controller
             return $fragment !== null && $fragment !== '';
         })));
     }
+    /**
+     * Get patient medical history (previous visits)
+     */
+    public function history(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->clinic_id) {
+            return response()->json([
+                'message' => 'You are not associated with any clinic',
+            ], 403);
+        }
+
+        // Verify patient belongs to this clinic
+        $patient = Patient::where('patient_id', $id)
+            ->whereHas('user', function ($query) use ($user) {
+                $query->where('clinic_id', $user->clinic_id);
+            })
+            ->firstOrFail();
+
+        $history = \App\Models\MedicalRecord::where('patient_id', $id)
+            ->with(['doctor.user', 'clinic'])
+            ->orderBy('visit_date', 'desc')
+            ->get()
+            ->map(function ($record) {
+                return [
+                    'date' => $record->visit_date->format('Y-m-d'),
+                    'clinic' => $record->clinic()->name ?? 'General Clinic',
+                    'diagnosis' => $record->diagnosis,
+                    'doctor' => $record->doctor->user->name,
+                ];
+            });
+
+        return response()->json($history);
+    }
 }

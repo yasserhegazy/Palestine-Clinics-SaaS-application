@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\ClinicRegistrationController;
+use App\Http\Controllers\Clinic\AppointmentController;
 use App\Http\Controllers\Clinic\StaffController;
 use App\Http\Controllers\Clinic\PatientController;
 use App\Http\Controllers\Doctor\AppointmentRequestsController;
@@ -41,6 +42,9 @@ Route::middleware(['auth:sanctum', 'role:Patient'])->prefix('patient')->group(fu
 
     // Dashboard Stats
     Route::get('/dashboard/stats', [\App\Http\Controllers\Patient\DashboardController::class, 'stats']);
+    
+    // Medical History
+    Route::get('/medical-history', [\App\Http\Controllers\Patient\DashboardController::class, 'history']);
 });
 
 // Manager and Secretary routes (clinic-specific)
@@ -51,6 +55,10 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary'])->prefix('clinic')-
     Route::get('/patients/search', [PatientController::class, 'search']);
     Route::get('/patients/lookup', [PatientController::class, 'searchByIdentifier']);
     Route::get('/patients/{patient_id}', [PatientController::class, 'show']);
+    Route::get('/appointments', [AppointmentController::class, 'createAppointmentForPatient']);
+    Route::get('/patients/{id}/history', [PatientController::class, 'history']);
+    Route::get('/doctors/{id}/time-slots', [AppointmentController::class, 'getAvailableTimeSlots']);
+    Route::get('/doctors', [AppointmentController::class, 'getAvailableDoctors']);
 });
 
 Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(function () {

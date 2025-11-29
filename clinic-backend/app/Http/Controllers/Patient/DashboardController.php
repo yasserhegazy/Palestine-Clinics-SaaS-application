@@ -77,4 +77,39 @@ class DashboardController extends Controller
             'recent_prescriptions' => $recentPrescriptions
         ], 200);
     }
+    /**
+     * Get authenticated patient's medical history
+     */
+    public function history(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'Patient') {
+            return response()->json([
+                'message' => 'Only patients can view medical history',
+            ], 403);
+        }
+
+        $patient = Patient::where('user_id', $user->user_id)->first();
+        if (!$patient) {
+            return response()->json([
+                'message' => 'Patient record not found',
+            ], 404);
+        }
+
+        $history = MedicalRecord::where('patient_id', $patient->patient_id)
+            ->with(['doctor.user', 'clinic'])
+            ->orderBy('visit_date', 'desc')
+            ->get()
+            ->map(function ($record) {
+                return [
+                    'date' => $record->visit_date->format('Y-m-d'),
+                    'clinic' => $record->clinic()->name ?? 'General Clinic',
+                    'diagnosis' => $record->diagnosis,
+                    'doctor' => $record->doctor->user->name,
+                ];
+            });
+
+        return response()->json($history);
+    }
 }
