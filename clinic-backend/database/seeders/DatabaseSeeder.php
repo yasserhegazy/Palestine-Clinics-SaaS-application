@@ -66,6 +66,9 @@ class DatabaseSeeder extends Seeder
             'specialization' => 'Cardiology',
             'available_days' => json_encode(['Monday', 'Wednesday', 'Friday']),
             'clinic_room' => 'Room 101',
+            'start_time' => '09:00:00',
+            'end_time' => '17:00:00',
+            'slot_duration' => 30,
         ]);
 
         // Create a patient user
@@ -108,6 +111,7 @@ class DatabaseSeeder extends Seeder
             'patient_id' => $patient->patient_id,
             'secretary_id' => null,
             'appointment_date' => now()->addDays(7)->setTime(9, 30),
+            'appointment_time' => '09:30:00',
             'status' => 'Approved',
             'notes' => 'Regular checkup',
         ]);
@@ -118,6 +122,7 @@ class DatabaseSeeder extends Seeder
             'patient_id' => $patient->patient_id,
             'secretary_id' => null,
             'appointment_date' => now()->addDays(14)->setTime(11, 0),
+            'appointment_time' => '11:00:00',
             'status' => 'Requested',
             'notes' => 'Follow-up appointment',
         ]);
@@ -128,6 +133,7 @@ class DatabaseSeeder extends Seeder
             'patient_id' => $patient->patient_id,
             'secretary_id' => null,
             'appointment_date' => now()->subDays(10)->setTime(16, 0),
+            'appointment_time' => '16:00:00',
             'status' => 'Completed',
             'notes' => 'Initial consultation',
         ]);

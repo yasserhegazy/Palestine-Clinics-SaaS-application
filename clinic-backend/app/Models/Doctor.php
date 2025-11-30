@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Helpers\TimeSlotGenerator;
 
 class Doctor extends Model
 {
@@ -15,11 +16,16 @@ class Doctor extends Model
         'specialization',
         'available_days',
         'clinic_room',
+        'start_time',
+        'end_time',
+        'slot_duration',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'start_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
     ];
 
     /**
@@ -98,5 +104,45 @@ class Doctor extends Model
                     ->whereDate('appointment_date', today())
                     ->where('status', '!=', 'Cancelled')
                     ->orderBy('appointment_date');
+    }
+
+    /**
+     * Get available time slots for a specific date
+     * 
+     * @param string $date Date in Y-m-d format
+     * @return array Available time slots
+     */
+    public function getAvailableSlots(string $date): array
+    {
+        // Get working hours
+        $workingTime = [
+            'start' => $this->start_time->format('H:i'),
+            'end' => $this->end_time->format('H:i'),
+        ];
+
+        // Get booked appointments for this date
+        $bookedAppointments = $this->appointments()
+            ->whereDate('appointment_date', $date)
+            ->whereIn('status', ['Requested', 'Pending Doctor Approval', 'Approved'])
+            ->get()
+            ->map(function ($appointment) {
+                $startTime = \Carbon\Carbon::parse($appointment->appointment_time);
+                $endTime = $startTime->copy()->addMinutes($this->slot_duration);
+                
+                return [
+                    'start' => $startTime->format('H:i'),
+                    'end' => $endTime->format('H:i'),
+                ];
+            })
+            ->toArray();
+
+        // Use TimeSlotGenerator to get available slots
+        $generator = new \App\Helpers\TimeSlotGenerator(
+            $workingTime,
+            $this->slot_duration,
+            $bookedAppointments
+        );
+
+        return $generator->get_final_available_slots();
     }
 }
