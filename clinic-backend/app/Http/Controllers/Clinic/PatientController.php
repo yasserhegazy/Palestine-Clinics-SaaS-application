@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Clinic;
 
 use App\Http\Controllers\Controller;
+use App\Models\MedicalRecord;
 use App\Models\User;
 use App\Models\Patient;
 use Illuminate\Http\Request;
@@ -317,7 +318,7 @@ class PatientController extends Controller
             })
             ->firstOrFail();
 
-        $history = \App\Models\MedicalRecord::where('patient_id', $id)
+        $history = MedicalRecord::where('patient_id', $id)
             ->with(['doctor.user', 'patient.user.clinic'])
             ->orderBy('visit_date', 'desc')
             ->get()

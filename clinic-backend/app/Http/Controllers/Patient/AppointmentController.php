@@ -276,6 +276,9 @@ class AppointmentController extends Controller
                     'specialization' => $user->doctor->specialization,
                     'available_days' => $user->doctor->available_days,
                     'clinic_room' => $user->doctor->clinic_room,
+                    'start_time' => $user->doctor->start_time ? $user->doctor->start_time->format('H:i') : null,
+                    'end_time' => $user->doctor->end_time ? $user->doctor->end_time->format('H:i') : null,
+                    'slot_duration' => $user->doctor->slot_duration,
                 ];
             });
 

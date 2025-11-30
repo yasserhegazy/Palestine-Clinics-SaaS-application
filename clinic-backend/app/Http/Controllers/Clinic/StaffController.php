@@ -75,6 +75,9 @@ class StaffController extends Controller
             'specialization' => 'required|string|max:100',
             'available_days' => 'required|string|max:100',
             'clinic_room' => 'required|string|max:50',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'slot_duration' => 'required|integer|min:5|max:120',
         ]);
 
         $user = $request->user();
@@ -111,6 +114,9 @@ class StaffController extends Controller
                 'specialization' => $validated['specialization'],
                 'available_days' => $validated['available_days'],
                 'clinic_room' => $validated['clinic_room'],
+                'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
+                'slot_duration' => $validated['slot_duration'],
             ]);
 
             DB::commit();
@@ -170,6 +176,9 @@ class StaffController extends Controller
                 $data['specialization'] = $member->doctor->specialization;
                 $data['available_days'] = $member->doctor->available_days;
                 $data['clinic_room'] = $member->doctor->clinic_room;
+                $data['start_time'] = $member->doctor->start_time ? $member->doctor->start_time->format('H:i') : null;
+                $data['end_time'] = $member->doctor->end_time ? $member->doctor->end_time->format('H:i') : null;
+                $data['slot_duration'] = $member->doctor->slot_duration;
             }
 
             return $data;
@@ -213,6 +222,9 @@ class StaffController extends Controller
             $rules['specialization'] = 'sometimes|string|max:100';
             $rules['available_days'] = 'sometimes|string|max:100';
             $rules['clinic_room'] = 'sometimes|string|max:50';
+            $rules['start_time'] = 'sometimes|date_format:H:i';
+            $rules['end_time'] = 'sometimes|date_format:H:i|after:start_time';
+            $rules['slot_duration'] = 'sometimes|integer|min:5|max:120';
         }
 
         $validated = $request->validate($rules);
@@ -239,6 +251,15 @@ class StaffController extends Controller
                 }
                 if (isset($validated['clinic_room'])) {
                     $doctorData['clinic_room'] = $validated['clinic_room'];
+                }
+                if (isset($validated['start_time'])) {
+                    $doctorData['start_time'] = $validated['start_time'];
+                }
+                if (isset($validated['end_time'])) {
+                    $doctorData['end_time'] = $validated['end_time'];
+                }
+                if (isset($validated['slot_duration'])) {
+                    $doctorData['slot_duration'] = $validated['slot_duration'];
                 }
 
                 if (!empty($doctorData)) {

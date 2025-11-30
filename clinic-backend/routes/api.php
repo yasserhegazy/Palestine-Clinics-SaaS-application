@@ -48,7 +48,7 @@ Route::middleware(['auth:sanctum', 'role:Patient'])->prefix('patient')->group(fu
 });
 
 // Manager and Secretary routes (clinic-specific)
-Route::middleware(['auth:sanctum', 'role:Manager,Secretary'])->prefix('clinic')->group(function () {
+Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor'])->prefix('clinic')->group(function () {
     // Patient management
     Route::post('/patients', [PatientController::class, 'createPatient']);
     Route::get('/patients', [PatientController::class, 'index']);
