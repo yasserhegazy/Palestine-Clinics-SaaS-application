@@ -13,7 +13,7 @@ class AppointmentController extends Controller
     public function getAvailableDoctors(Request $request)
     {
         $user = $request->user();
-        
+
         $doctors = Doctor::with('user')
             ->whereHas('user', function ($query) use ($user) {
                 $query->where('clinic_id', $user->clinic_id);
@@ -27,7 +27,7 @@ class AppointmentController extends Controller
                     'clinic_room' => $doctor->clinic_room,
                 ];
             });
-        
+
         return response()->json([
             'data' => $doctors,
         ]);
@@ -49,7 +49,7 @@ class AppointmentController extends Controller
         try {
             // Get doctor and verify they belong to the same clinic
             $doctor = Doctor::with('user')->findOrFail($validated['doctorId']);
-            
+
             if ($doctor->user->clinic_id !== $user->clinic_id) {
                 return response()->json([
                     'message' => 'Doctor does not belong to your clinic',
@@ -93,7 +93,7 @@ class AppointmentController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Error creating appointment: ' . $e->getMessage());
-            
+
             return response()->json([
                 'message' => 'Failed to create appointment',
                 'error' => $e->getMessage(),

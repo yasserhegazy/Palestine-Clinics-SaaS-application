@@ -108,7 +108,7 @@ class Doctor extends Model
 
     /**
      * Get available time slots for a specific date
-     * 
+     *
      * @param string $date Date in Y-m-d format
      * @return array Available time slots
      */
@@ -135,7 +135,7 @@ class Doctor extends Model
             ->map(function ($appointment) {
                 $startTime = \Carbon\Carbon::parse($appointment->appointment_date);
                 $endTime = $startTime->copy()->addMinutes($this->slot_duration ?? 30);
-                
+
                 return [
                     'start' => $startTime->format('H:i'),
                     'end' => $endTime->format('H:i'),
@@ -157,7 +157,7 @@ class Doctor extends Model
             $startMinutes = $this->convertTimeToMinutes($startTime);
             $endMinutes = $startMinutes + ($this->slot_duration ?? 30);
             $endTime = $this->convertMinutesToTime($endMinutes);
-            
+
             return [
                 'start' => $startTime,
                 'end' => $endTime,
@@ -171,7 +171,7 @@ class Doctor extends Model
     private function convertTimeToMinutes(string $time): int
     {
         $parts = explode(":", $time);
-        $hours = (int)$parts[0]; 
+        $hours = (int)$parts[0];
         $minutes = (int)$parts[1];
         return $hours * 60 + $minutes;
     }
@@ -183,7 +183,7 @@ class Doctor extends Model
     {
         $hours = intdiv($minutes, 60);
         $timeMinutes = $minutes % 60;
-        
+
         return sprintf('%02d:%02d', $hours, $timeMinutes);
     }
 }

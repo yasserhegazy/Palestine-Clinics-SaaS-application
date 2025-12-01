@@ -44,7 +44,7 @@ class AppointmentController extends Controller
 
         // Get doctor and verify they belong to the same clinic
         $doctor = Doctor::with('user')->findOrFail($validated['doctor_id']);
-        
+
         if ($doctor->user->clinic_id !== $user->clinic_id) {
             return response()->json([
                 'message' => 'Doctor does not belong to your clinic',
