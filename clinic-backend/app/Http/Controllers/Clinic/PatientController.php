@@ -318,19 +318,28 @@ class PatientController extends Controller
             })
             ->firstOrFail();
 
-        $history = MedicalRecord::where('patient_id', $id)
+        // Log for debugging
+        Log::info("Fetching medical history for patient_id: {$id}");
+
+        $medicalRecords = MedicalRecord::where('patient_id', $id)
             ->with(['doctor.user', 'patient.user.clinic'])
             ->orderBy('visit_date', 'desc')
-            ->get()
-            ->map(function ($record) {
-                return [
-                    'date' => $record->visit_date->format('Y-m-d'),
-                    'clinic' => $record->patient->user->clinic->name ?? 'General Clinic',
-                    'diagnosis' => $record->diagnosis,
-                    'doctor' => $record->doctor->user->name,
-                ];
-            });
+            ->get();
 
-        return response()->json($history);
+        Log::info("Found {$medicalRecords->count()} medical records for patient {$id}");
+
+        $history = $medicalRecords->map(function ($record) {
+            return [
+                'date' => $record->visit_date ? $record->visit_date->format('Y-m-d') : 'N/A',
+                'clinic' => data_get($record, 'patient.user.clinic.name', 'General Clinic'),
+                'diagnosis' => $record->diagnosis ?? 'No diagnosis',
+                'doctor' => data_get($record, 'doctor.user.name', 'Unknown Doctor'),
+            ];
+        });
+
+        return response()->json([
+            'data' => $history,
+            'count' => $history->count(),
+        ]);
     }
 }

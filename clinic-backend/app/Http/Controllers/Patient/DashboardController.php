@@ -97,19 +97,23 @@ class DashboardController extends Controller
             ], 404);
         }
 
-        $history = MedicalRecord::where('patient_id', $patient->patient_id)
+        $medicalRecords = MedicalRecord::where('patient_id', $patient->patient_id)
             ->with(['doctor.user', 'patient.user.clinic'])
             ->orderBy('visit_date', 'desc')
-            ->get()
-            ->map(function ($record) {
-                return [
-                    'date' => $record->visit_date->format('Y-m-d'),
-                    'clinic' => $record->patient->user->clinic->name ?? 'General Clinic',
-                    'diagnosis' => $record->diagnosis,
-                    'doctor' => $record->doctor->user->name,
-                ];
-            });
+            ->get();
 
-        return response()->json($history);
+        $history = $medicalRecords->map(function ($record) {
+            return [
+                'date' => $record->visit_date ? $record->visit_date->format('Y-m-d') : 'N/A',
+                'clinic' => data_get($record, 'patient.user.clinic.name', 'General Clinic'),
+                'diagnosis' => $record->diagnosis ?? 'No diagnosis',
+                'doctor' => data_get($record, 'doctor.user.name', 'Unknown Doctor'),
+            ];
+        });
+
+        return response()->json([
+            'data' => $history,
+            'count' => $history->count(),
+        ]);
     }
 }

@@ -4,6 +4,10 @@
 
 This document details the API endpoints for fetching patient medical history (previous visits).
 
+## Changelog
+
+**2025-12-01**: Updated response format to include `data` wrapper and `count` field for consistency across all endpoints.
+
 ## Endpoints
 
 ### 1. Get Patient Medical History (Clinic Staff)
@@ -12,7 +16,7 @@ Fetches the medical history for a specific patient. Accessible by Managers and S
 
 -   **URL**: `/api/clinic/patients/{id}/history`
 -   **Method**: `GET`
--   **Auth Required**: Yes (Role: Manager, Secretary)
+-   **Auth Required**: Yes (Role: Manager, Secretary, Doctor)
 -   **URL Parameters**:
     -   `id` (integer): The ID of the patient.
 
@@ -22,20 +26,23 @@ Fetches the medical history for a specific patient. Accessible by Managers and S
 -   **Content**:
 
 ```json
-[
-    {
-        "date": "2025-02-28",
-        "clinic": "Dermatology Clinic",
-        "diagnosis": "Chronic skin allergy",
-        "doctor": "Dr. Hazem Rabee"
-    },
-    {
-        "date": "2025-01-15",
-        "clinic": "Ophthalmology",
-        "diagnosis": "Mild myopia",
-        "doctor": "Dr. Sanaa Shahada"
-    }
-]
+{
+    "data": [
+        {
+            "date": "2025-02-28",
+            "clinic": "Dermatology Clinic",
+            "diagnosis": "Chronic skin allergy",
+            "doctor": "Dr. Hazem Rabee"
+        },
+        {
+            "date": "2025-01-15",
+            "clinic": "Ophthalmology",
+            "diagnosis": "Mild myopia",
+            "doctor": "Dr. Sanaa Shahada"
+        }
+    ],
+    "count": 2
+}
 ```
 
 #### Error Responses
@@ -59,14 +66,17 @@ Fetches the medical history for the currently authenticated patient.
 -   **Content**:
 
 ```json
-[
-    {
-        "date": "2025-02-28",
-        "clinic": "Dermatology Clinic",
-        "diagnosis": "Chronic skin allergy",
-        "doctor": "Dr. Hazem Rabee"
-    }
-]
+{
+    "data": [
+        {
+            "date": "2025-02-28",
+            "clinic": "Dermatology Clinic",
+            "diagnosis": "Chronic skin allergy",
+            "doctor": "Dr. Hazem Rabee"
+        }
+    ],
+    "count": 1
+}
 ```
 
 #### Error Responses
