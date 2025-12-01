@@ -32,17 +32,17 @@ Route::middleware(['auth:sanctum', 'role:Patient'])->prefix('patient')->group(fu
     Route::get('/appointments/upcoming', [\App\Http\Controllers\Patient\AppointmentController::class, 'upcoming']);
     Route::get('/appointments/{appointment_id}', [\App\Http\Controllers\Patient\AppointmentController::class, 'show']);
     Route::post('/appointments/{appointment_id}/cancel', [\App\Http\Controllers\Patient\AppointmentController::class, 'cancel']);
-    
+
     // Get available doctors
     Route::get('/doctors', [\App\Http\Controllers\Patient\AppointmentController::class, 'getAvailableDoctors']);
-    
+
     // Medical Records (read-only for patients)
     Route::get('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'index']);
     Route::get('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'show']);
 
     // Dashboard Stats
     Route::get('/dashboard/stats', [\App\Http\Controllers\Patient\DashboardController::class, 'stats']);
-    
+
     // Medical History
     Route::get('/medical-history', [\App\Http\Controllers\Patient\DashboardController::class, 'history']);
 });
@@ -55,7 +55,7 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor'])->prefix('cl
     Route::get('/patients/search', [PatientController::class, 'search']);
     Route::get('/patients/lookup', [PatientController::class, 'searchByIdentifier']);
     Route::get('/patients/{patient_id}', [PatientController::class, 'show']);
-    Route::get('/appointments', [AppointmentController::class, 'createAppointmentForPatient']);
+    Route::post('/appointments/create', [AppointmentController::class, 'createAppointmentForPatient']);
     Route::get('/patients/{id}/history', [PatientController::class, 'history']);
     Route::get('/doctors/{id}/time-slots', [AppointmentController::class, 'getAvailableTimeSlots']);
     Route::get('/doctors', [AppointmentController::class, 'getAvailableDoctors']);
@@ -67,7 +67,7 @@ Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(func
     Route::put('/appointments/approve/{appointment_id}', [AppointmentRequestsController::class, 'approve']);
     Route::put('/appointments/reject/{appointment_id}', [AppointmentRequestsController::class, 'reject']);
     Route::put('/appointments/reschedule/{appointment_id}', [AppointmentRequestsController::class, 'reschedule']);
-    
+
     // Medical Records (full CRUD for doctors)
     Route::get('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'index']);
     Route::post('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'store']);

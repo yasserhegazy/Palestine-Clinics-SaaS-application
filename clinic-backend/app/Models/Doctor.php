@@ -114,10 +114,17 @@ class Doctor extends Model
      */
     public function getAvailableSlots(string $date): array
     {
+        // Check if start_time and end_time are set
+        if (!$this->start_time || !$this->end_time) {
+            // Return default working hours if not set
+            $this->start_time = '09:00';
+            $this->end_time = '17:00';
+        }
+
         // Get working hours
         $workingTime = [
-            'start' => $this->start_time->format('H:i'),
-            'end' => $this->end_time->format('H:i'),
+            'start' => is_string($this->start_time) ? $this->start_time : $this->start_time->format('H:i'),
+            'end' => is_string($this->end_time) ? $this->end_time : $this->end_time->format('H:i'),
         ];
 
         // Get booked appointments for this date
@@ -126,8 +133,8 @@ class Doctor extends Model
             ->whereIn('status', ['Requested', 'Pending Doctor Approval', 'Approved'])
             ->get()
             ->map(function ($appointment) {
-                $startTime = \Carbon\Carbon::parse($appointment->appointment_time);
-                $endTime = $startTime->copy()->addMinutes($this->slot_duration);
+                $startTime = \Carbon\Carbon::parse($appointment->appointment_date);
+                $endTime = $startTime->copy()->addMinutes($this->slot_duration ?? 30);
                 
                 return [
                     'start' => $startTime->format('H:i'),
@@ -139,10 +146,44 @@ class Doctor extends Model
         // Use TimeSlotGenerator to get available slots
         $generator = new \App\Helpers\TimeSlotGenerator(
             $workingTime,
-            $this->slot_duration,
+            $this->slot_duration ?? 30,
             $bookedAppointments
         );
 
-        return $generator->get_final_available_slots();
+        $availableSlotTimes = $generator->get_final_available_slots();
+
+        // Convert to format expected by frontend (array of objects with start and end)
+        return array_map(function ($startTime) {
+            $startMinutes = $this->convertTimeToMinutes($startTime);
+            $endMinutes = $startMinutes + ($this->slot_duration ?? 30);
+            $endTime = $this->convertMinutesToTime($endMinutes);
+            
+            return [
+                'start' => $startTime,
+                'end' => $endTime,
+            ];
+        }, $availableSlotTimes);
+    }
+
+    /**
+     * Convert time string to minutes
+     */
+    private function convertTimeToMinutes(string $time): int
+    {
+        $parts = explode(":", $time);
+        $hours = (int)$parts[0]; 
+        $minutes = (int)$parts[1];
+        return $hours * 60 + $minutes;
+    }
+
+    /**
+     * Convert minutes to time string
+     */
+    private function convertMinutesToTime(int $minutes): string
+    {
+        $hours = intdiv($minutes, 60);
+        $timeMinutes = $minutes % 60;
+        
+        return sprintf('%02d:%02d', $hours, $timeMinutes);
     }
 }
