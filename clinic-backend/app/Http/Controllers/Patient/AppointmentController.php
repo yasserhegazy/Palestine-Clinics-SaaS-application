@@ -38,8 +38,7 @@ class AppointmentController extends Controller
         // Validate request
         $validated = $request->validate([
             'doctor_id' => 'required|integer|exists:doctors,doctor_id',
-            'appointment_date' => 'required|date|after_or_equal:today',
-            'appointment_time' => 'required|date_format:H:i',
+            'appointment_date' => 'required|date|after:now',
             'notes' => 'nullable|string|max:500',
         ]);
 
@@ -55,16 +54,15 @@ class AppointmentController extends Controller
         DB::beginTransaction();
 
         try {
-            // Check for conflicting appointments for the same doctor at the same date and time
+            // Check for conflicting appointments for the same doctor at the same time
             $existingAppointment = Appointment::where('doctor_id', $validated['doctor_id'])
                 ->where('appointment_date', $validated['appointment_date'])
-                ->where('appointment_time', $validated['appointment_time'])
                 ->whereIn('status', ['Requested', 'Pending Doctor Approval', 'Approved'])
                 ->first();
 
             if ($existingAppointment) {
                 throw ValidationException::withMessages([
-                    'appointment_time' => ['This time slot is already booked. Please choose another time.'],
+                    'appointment_date' => ['This time slot is already booked. Please choose another time.'],
                 ]);
             }
 
@@ -75,7 +73,6 @@ class AppointmentController extends Controller
                 'patient_id' => $patient->patient_id,
                 'secretary_id' => null, // Patient creates their own appointment
                 'appointment_date' => $validated['appointment_date'],
-                'appointment_time' => $validated['appointment_time'],
                 'status' => 'Requested',
                 'notes' => $validated['notes'] ?? null,
             ]);
@@ -276,9 +273,6 @@ class AppointmentController extends Controller
                     'specialization' => $user->doctor->specialization,
                     'available_days' => $user->doctor->available_days,
                     'clinic_room' => $user->doctor->clinic_room,
-                    'start_time' => $user->doctor->start_time ? $user->doctor->start_time->format('H:i') : null,
-                    'end_time' => $user->doctor->end_time ? $user->doctor->end_time->format('H:i') : null,
-                    'slot_duration' => $user->doctor->slot_duration,
                 ];
             });
 
