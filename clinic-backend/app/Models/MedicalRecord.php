@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class MedicalRecord extends Model
 {
+    use HasFactory;
+
     protected $primaryKey = 'record_id';
 
     protected $fillable = [
