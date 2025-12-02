@@ -132,8 +132,18 @@ class Doctor extends Model
             ->whereDate('appointment_date', $date)
             ->whereIn('status', ['Requested', 'Pending Doctor Approval', 'Approved'])
             ->get()
-            ->map(function ($appointment) {
-                $startTime = \Carbon\Carbon::parse($appointment->appointment_date);
+            ->map(function ($appointment) use ($date) {
+                // Use appointment_time if available
+                $time = $appointment->appointment_time;
+                
+                if (!$time) {
+                    // Fallback: try to parse from appointment_date if it happens to contain time (legacy)
+                    // But since appointment_date is cast to date, this might just be 00:00
+                    $startTime = \Carbon\Carbon::parse($appointment->appointment_date);
+                } else {
+                    $startTime = \Carbon\Carbon::parse($date . ' ' . $time);
+                }
+
                 $endTime = $startTime->copy()->addMinutes($this->slot_duration ?? 30);
 
                 return [

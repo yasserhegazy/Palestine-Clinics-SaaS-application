@@ -56,12 +56,10 @@ class AppointmentController extends Controller
                 ], 400);
             }
 
-            // Combine date and time into datetime
-            $appointmentDateTime = $validated['date'] . ' ' . $validated['time'];
-
             // Check for conflicting appointments
             $existingAppointment = Appointment::where('doctor_id', $validated['doctorId'])
-                ->where('appointment_date', $appointmentDateTime)
+                ->where('appointment_date', $validated['date'])
+                ->where('appointment_time', $validated['time'])
                 ->whereIn('status', ['Requested', 'Pending Doctor Approval', 'Approved'])
                 ->first();
 
@@ -78,7 +76,8 @@ class AppointmentController extends Controller
                 'doctor_id' => $validated['doctorId'],
                 'patient_id' => $validated['patientId'],
                 'secretary_id' => $user->user_id,
-                'appointment_date' => $appointmentDateTime,
+                'appointment_date' => $validated['date'],
+                'appointment_time' => $validated['time'],
                 'status' => 'Approved',
                 'notes' => $validated['notes'] ?? null,
             ]);
