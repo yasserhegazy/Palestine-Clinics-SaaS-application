@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Admin\ClinicRegistrationController;
+use App\Http\Controllers\Admin\ClinicController as AdminClinicController;
 use App\Http\Controllers\Clinic\AppointmentController;
 use App\Http\Controllers\Clinic\StaffController;
 use App\Http\Controllers\Clinic\PatientController;
@@ -89,21 +90,22 @@ Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('clinic')->group(fun
 });
 
 Route::middleware(['auth:sanctum', 'role:Admin'])->prefix('admin')->group(function () {
-    // To see the admin dashboard
+    // Dashboard
+    Route::get('/dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'stats']);
+
     Route::get('/dashboard', function () {
         return response()->json([
             'message' => 'Platform Admin Dashboard',
             'description' => 'Manage all clinics, users, and system settings',
         ]);
     });
-    // Manage all clinics, and see their details
-    Route::get('/clinics', function () {
-        return response()->json(['message' => 'List all clinics']);
-    });
-    // To see some clinic details
-    Route::get('/clinics/{clinic_id}', function ($clinic_id) {
-        return response()->json(['message' => "View clinic"]);
-    });
+
+    // Clinic Management Routes
+    Route::get('/clinics', [AdminClinicController::class, 'index']);
+    Route::get('/clinics/{id}', [AdminClinicController::class, 'show']);
+    Route::put('/clinics/{id}', [AdminClinicController::class, 'update']);
+    Route::patch('/clinics/{id}/toggle-status', [AdminClinicController::class, 'toggleStatus']);
+    Route::delete('/clinics/{id}', [AdminClinicController::class, 'destroy']);
 
     // Update clinic logo
     Route::post('/clinics/{clinic_id}/logo', [ClinicRegistrationController::class, 'updateLogo']);
