@@ -18,7 +18,7 @@ class Clinic extends Model
         'address',
         'phone',
         'email',
-        'logo',
+        'logo_path',
         'subscription_plan',
         'status',
     ];
@@ -35,8 +35,8 @@ class Clinic extends Model
      */
     public function getLogoUrlAttribute(): ?string
     {
-        if ($this->logo) {
-            return asset('storage/' . $this->logo);
+        if ($this->logo_path) {
+            return asset('storage/' . $this->logo_path);
         }
         return null;
     }
