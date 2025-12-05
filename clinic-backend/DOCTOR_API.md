@@ -251,59 +251,24 @@ Retrieves all approved appointments for the authenticated doctor scheduled for t
 {
     "appointments": [
         {
-            "appointment_id": 15,
-            "clinic_id": 1,
-            "doctor_id": 5,
-            "patient_id": 10,
-            "appointment_date": "2025-12-05",
-            "appointment_time": "10:00 AM",
+            "appointment_id": 5,
+            "appointment_date": "2025-12-05T00:00:00.000000Z",
+            "appointment_time": "15:48:00",
             "status": "Approved",
-            "notes": "Regular checkup",
-            "created_at": "2025-12-01T09:00:00.000000Z",
-            "updated_at": "2025-12-01T09:00:00.000000Z",
+            "notes": "Aut sit corporis dolores est illo dignissimos dicta.",
             "patient": {
-                "patient_id": 10,
-                "user_id": 15,
-                "user": {
-                    "user_id": 15,
-                    "name": "John Doe",
-                    "email": "john@example.com",
-                    "phone": "+970599123456"
-                }
-            },
-            "clinic": {
-                "clinic_id": 1,
-                "name": "Main Health Clinic",
-                "address": "123 Medical Street"
-            }
-        },
-        {
-            "appointment_id": 16,
-            "clinic_id": 1,
-            "doctor_id": 5,
-            "patient_id": 12,
-            "appointment_date": "2025-12-05",
-            "appointment_time": "02:00 PM",
-            "status": "Approved",
-            "notes": "Follow-up visit",
-            "patient": {
-                "patient_id": 12,
-                "user_id": 18,
-                "user": {
-                    "user_id": 18,
-                    "name": "Jane Smith",
-                    "email": "jane@example.com",
-                    "phone": "+970599654321"
-                }
-            },
-            "clinic": {
-                "clinic_id": 1,
-                "name": "Main Health Clinic",
-                "address": "123 Medical Street"
+                "patient_id": 1,
+                "name": "Patient One",
+                "phone": "+970590000006",
+                "national_id": "893333644",
+                "date_of_birth": "1989-03-20T00:00:00.000000Z",
+                "gender": "Female",
+                "blood_type": "B-",
+                "allergies": null
             }
         }
     ],
-    "total": 2,
+    "total": 1,
     "date": "2025-12-05"
 }
 ```
@@ -361,57 +326,10 @@ Completes an approved appointment and creates a medical record for the visit. Th
 
 ```json
 {
-    "message": "Appointment completed successfully",
-    "appointment": {
-        "appointment_id": 15,
-        "clinic_id": 1,
-        "doctor_id": 5,
-        "patient_id": 10,
-        "appointment_date": "2025-12-05",
-        "appointment_time": "10:00 AM",
-        "status": "Completed",
-        "notes": "Regular checkup",
-        "created_at": "2025-12-01T09:00:00.000000Z",
-        "updated_at": "2025-12-05T10:30:00.000000Z",
-        "patient": {
-            "patient_id": 10,
-            "user_id": 15,
-            "user": {
-                "user_id": 15,
-                "name": "John Doe",
-                "email": "john@example.com",
-                "phone": "+970599123456"
-            }
-        },
-        "clinic": {
-            "clinic_id": 1,
-            "name": "Main Health Clinic",
-            "address": "123 Medical Street"
-        },
-        "doctor": {
-            "doctor_id": 5,
-            "user_id": 8,
-            "specialization": "General Practice",
-            "user": {
-                "user_id": 8,
-                "name": "Dr. Sarah Johnson",
-                "email": "sarah.johnson@clinic.com"
-            }
-        }
-    },
-    "medical_record": {
-        "record_id": 42,
-        "patient_id": 10,
-        "doctor_id": 5,
-        "clinic_id": 1,
-        "visit_date": "2025-12-05 10:30:00",
-        "symptoms": "Persistent headache, dizziness, and fatigue for the past 3 days",
-        "diagnosis": "Tension headache likely due to stress and lack of sleep",
-        "prescription": "Ibuprofen 400mg twice daily for 5 days. Ensure adequate rest and hydration.",
-        "next_visit": "2025-12-20",
-        "created_at": "2025-12-05T10:30:00.000000Z",
-        "updated_at": "2025-12-05T10:30:00.000000Z"
-    }
+  "message": "Appointment completed successfully",
+  "appointment_id": 5,
+  "status": "Completed",
+  "medical_record_id": 123
 }
 ```
 

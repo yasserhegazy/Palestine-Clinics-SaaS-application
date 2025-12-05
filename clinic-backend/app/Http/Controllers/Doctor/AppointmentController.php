@@ -37,7 +37,26 @@ class AppointmentController extends Controller
             ->today()
             ->with(['patient.user', 'clinic'])
             ->orderBy('appointment_time', 'asc')
-            ->get();
+            ->get()
+            ->map(function ($appointment) {
+                return [
+                    'appointment_id' => $appointment->appointment_id,
+                    'appointment_date' => $appointment->appointment_date,
+                    'appointment_time' => $appointment->appointment_time,
+                    'status' => $appointment->status,
+                    'notes' => $appointment->notes,
+                    'patient' => [
+                        'patient_id' => $appointment->patient->patient_id,
+                        'name' => $appointment->patient->user->name,
+                        'phone' => $appointment->patient->user->phone,
+                        'national_id' => $appointment->patient->national_id,
+                        'date_of_birth' => $appointment->patient->date_of_birth,
+                        'gender' => $appointment->patient->gender,
+                        'blood_type' => $appointment->patient->blood_type,
+                        'allergies' => $appointment->patient->allergies,
+                    ],
+                ];
+            });
 
         return response()->json([
             'appointments' => $appointments,
@@ -120,16 +139,14 @@ class AppointmentController extends Controller
 
             DB::commit();
 
-            // Load relationships for the response
-            $appointment->load(['patient.user', 'clinic', 'doctor.user']);
-
             // Extract medical record from response
             $medicalRecordData = json_decode($medicalRecordResponse->getContent(), true);
 
             return response()->json([
                 'message' => 'Appointment completed successfully',
-                'appointment' => $appointment,
-                'medical_record' => $medicalRecordData['record'] ?? null,
+                'appointment_id' => $appointment->appointment_id,
+                'status' => $appointment->status,
+                'medical_record_id' => $medicalRecordData['record']['record_id'] ?? null,
             ], 201);
 
         } catch (\Exception $e) {
