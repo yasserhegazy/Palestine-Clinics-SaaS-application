@@ -7,6 +7,8 @@ use App\Http\Controllers\Clinic\AppointmentController;
 use App\Http\Controllers\Clinic\StaffController;
 use App\Http\Controllers\Clinic\PatientController;
 use App\Http\Controllers\Doctor\AppointmentRequestsController;
+use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentController;
+use App\Http\Controllers\Manager\ClinicController as ManagerClinicController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -63,11 +65,20 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor'])->prefix('cl
 });
 
 Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(function () {
-    // Appointment requests
-    Route::get('/appointments', [AppointmentRequestsController::class, 'index']);
+    // Appointment requests (pending approval)
+    Route::get('/appointments/requests', [AppointmentRequestsController::class, 'index']);
     Route::put('/appointments/approve/{appointment_id}', [AppointmentRequestsController::class, 'approve']);
     Route::put('/appointments/reject/{appointment_id}', [AppointmentRequestsController::class, 'reject']);
     Route::put('/appointments/reschedule/{appointment_id}', [AppointmentRequestsController::class, 'reschedule']);
+
+    // Today's appointments (approved)
+    Route::get('/appointments/today', [DoctorAppointmentController::class, 'todayAppointments']);
+
+    // Complete appointment with medical record
+    Route::post('/appointments/{appointment_id}/complete', [DoctorAppointmentController::class, 'completeAppointment']);
+
+    // All appointments (with optional filters)
+    Route::get('/appointments', [DoctorAppointmentController::class, 'index']);
 
     // Medical Records (full CRUD for doctors)
     Route::get('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'index']);
@@ -77,9 +88,17 @@ Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(func
     Route::delete('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'destroy']);
 });
 // Manager-only routes
-Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('clinic')->group(function () {
-    // Update own clinic logo
-    Route::post('/logo', [ClinicRegistrationController::class, 'updateOwnClinicLogo']);
+Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('manager')->group(function () {
+    // Clinic settings management
+    Route::get('/clinic/settings', [ManagerClinicController::class, 'getSettings']);
+    Route::post('/clinic/settings', [ManagerClinicController::class, 'updateSettings']);
+    Route::put('/clinic/settings', [ManagerClinicController::class, 'updateSettings']); // Keep PUT for backward compatibility
+
+    // Get clinic logo
+    Route::get('/clinic/logo', [ManagerClinicController::class, 'getLogo']);
+
+    // Update own clinic logo (legacy route - kept for backward compatibility)
+    Route::post('/clinic/logo', [ClinicRegistrationController::class, 'updateOwnClinicLogo']);
 
     // Staff management
     Route::post('/secretaries', [StaffController::class, 'addSecretary']);
@@ -93,12 +112,6 @@ Route::middleware(['auth:sanctum', 'role:Admin'])->prefix('admin')->group(functi
     // Dashboard
     Route::get('/dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'stats']);
 
-    Route::get('/dashboard', function () {
-        return response()->json([
-            'message' => 'Platform Admin Dashboard',
-            'description' => 'Manage all clinics, users, and system settings',
-        ]);
-    });
 
     // Clinic Management Routes
     Route::get('/clinics', [AdminClinicController::class, 'index']);
