@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('address', 255);
             $table->string('phone', 20);
             $table->string('email', 100);
+            $table->string('logo_path', 255)->nullable();
             $table->enum('subscription_plan', ['Basic', 'Standard', 'Premium']);
             $table->enum('status', ['Active', 'Inactive']);
             $table->timestamps();
