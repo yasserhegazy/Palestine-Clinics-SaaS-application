@@ -311,11 +311,12 @@ class PatientController extends Controller
             ], 403);
         }
 
-        // Verify patient belongs to this clinic
+        // Verify patient belongs to this clinic and load user relationship
         $patient = Patient::where('patient_id', $id)
             ->whereHas('user', function ($query) use ($user) {
                 $query->where('clinic_id', $user->clinic_id);
             })
+            ->with('user')
             ->firstOrFail();
 
         // Log for debugging
@@ -328,18 +329,32 @@ class PatientController extends Controller
 
         Log::info("Found {$medicalRecords->count()} medical records for patient {$id}");
 
-        $history = $medicalRecords->map(function ($record) {
+        $medicalHistory = $medicalRecords->map(function ($record) {
             return [
-                'date' => $record->visit_date ? $record->visit_date->format('Y-m-d') : 'N/A',
-                'clinic' => data_get($record, 'patient.user.clinic.name', 'General Clinic'),
-                'diagnosis' => $record->diagnosis ?? 'No diagnosis',
-                'doctor' => data_get($record, 'doctor.user.name', 'Unknown Doctor'),
+                'id' => $record->record_id,
+                'visit_date' => $record->visit_date ? $record->visit_date->format('Y-m-d') : null,
+                'symptoms' => $record->symptoms ?? '',
+                'diagnosis' => $record->diagnosis ?? '',
+                'prescription' => $record->prescription ?? '',
+                'doctor_name' => data_get($record, 'doctor.user.name', 'Unknown Doctor'),
+                'created_at' => $record->created_at ? $record->created_at->toISOString() : null,
             ];
         });
 
         return response()->json([
-            'data' => $history,
-            'count' => $history->count(),
+            'patient' => [
+                'patient_id' => $patient->patient_id,
+                'date_of_birth' => $patient->date_of_birth,
+                'gender' => $patient->gender,
+                'blood_type' => $patient->blood_type,
+                'allergies' => $patient->allergies,
+                'user' => [
+                    'name' => $patient->user->name,
+                    'phone' => $patient->user->phone,
+                    'email' => $patient->user->email,
+                ],
+            ],
+            'medicalHistory' => $medicalHistory,
         ]);
     }
 }

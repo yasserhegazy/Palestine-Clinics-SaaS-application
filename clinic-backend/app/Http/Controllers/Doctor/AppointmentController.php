@@ -137,17 +137,34 @@ class AppointmentController extends Controller
             $appointment->status = 'Completed';
             $appointment->save();
 
+            // Create next appointment if requested
+            $nextAppointment = null;
+            if ($request->input('create_next_appointment', false)) {
+                $nextAppointment = $this->createNextAppointment($doctor, $appointment);
+            }
+
             DB::commit();
 
             // Extract medical record from response
             $medicalRecordData = json_decode($medicalRecordResponse->getContent(), true);
 
-            return response()->json([
+            $response = [
                 'message' => 'Appointment completed successfully',
                 'appointment_id' => $appointment->appointment_id,
                 'status' => $appointment->status,
                 'medical_record_id' => $medicalRecordData['record']['record_id'] ?? null,
-            ], 201);
+            ];
+
+            if ($nextAppointment) {
+                $response['next_appointment'] = [
+                    'appointment_id' => $nextAppointment->appointment_id,
+                    'appointment_date' => $nextAppointment->appointment_date,
+                    'appointment_time' => $nextAppointment->appointment_time,
+                    'status' => $nextAppointment->status,
+                ];
+            }
+
+            return response()->json($response, 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -157,6 +174,49 @@ class AppointmentController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Create next appointment with first available slot
+     */
+    private function createNextAppointment(Doctor $doctor, Appointment $completedAppointment)
+    {
+        // Start searching from tomorrow
+        $searchDate = now()->addDay()->startOfDay();
+        $maxDaysToSearch = 30; // Search up to 30 days ahead
+        $daysSearched = 0;
+
+        while ($daysSearched < $maxDaysToSearch) {
+            $dateString = $searchDate->format('Y-m-d');
+            
+            // Get available slots for this date
+            $availableSlots = $doctor->getAvailableSlots($dateString);
+
+            // If there are available slots, book the first one
+            if (!empty($availableSlots)) {
+                $firstSlot = $availableSlots[0];
+
+                // Create the appointment
+                $nextAppointment = Appointment::create([
+                    'patient_id' => $completedAppointment->patient_id,
+                    'doctor_id' => $doctor->doctor_id,
+                    'clinic_id' => $completedAppointment->clinic_id,
+                    'appointment_date' => $dateString,
+                    'appointment_time' => $firstSlot['start'],
+                    'status' => 'Approved', // Auto-approve the next appointment
+                    'notes' => 'Follow-up appointment (auto-scheduled)',
+                ]);
+
+                return $nextAppointment;
+            }
+
+            // Move to next day
+            $searchDate->addDay();
+            $daysSearched++;
+        }
+
+        // No available slots found within the search period
+        return null;
     }
 
     /**
