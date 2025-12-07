@@ -54,6 +54,7 @@ Route::middleware(['auth:sanctum', 'role:Patient'])->prefix('patient')->group(fu
 Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor'])->prefix('clinic')->group(function () {
     // Patient management
     Route::post('/patients', [PatientController::class, 'createPatient']);
+    Route::put('/patients/{patient_id}', [PatientController::class, 'updatePatient']);
     Route::get('/patients', [PatientController::class, 'index']);
     Route::get('/patients/search', [PatientController::class, 'search']);
     Route::get('/patients/lookup', [PatientController::class, 'searchByIdentifier']);

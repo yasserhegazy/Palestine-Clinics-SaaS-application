@@ -151,7 +151,7 @@ class PatientController extends Controller
             ], 403);
         }
 
-        $patient = Patient::with(['user', 'appointments', 'medicalRecords'])
+        $patient = Patient::with('user')
             ->whereHas('user', function ($query) use ($user) {
                 $query->where('clinic_id', $user->clinic_id);
             })
@@ -159,6 +159,78 @@ class PatientController extends Controller
 
         return response()->json($patient);
     }
+    public function updatePatient(Request $request, $patient_id)
+    {
+        $validated = $request->validate([
+            'patient_id' => 'required|integer|exists:patients,patient_id',
+            'name' => 'required|string|max:100',
+            'nationalId' => 'required|string|max:20|unique:patients,national_id,' . $request->input('patient_id') . ',patient_id',
+            'phone' => 'required|string|max:20',
+            'dateOfBirth' => 'required|date|before_or_equal:today',
+            'gender' => 'required|in:Male,Female,Other',
+            'address' => 'required|string|max:255',
+            'bloodType' => 'nullable|string|max:5',
+            'allergies' => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+        $patient = Patient::with('user')->findOrFail($validated['patient_id']);
+
+        if (!$user->clinic_id || !$patient->user || $patient->user->clinic_id !== $user->clinic_id) {
+            return response()->json([
+                'message' => 'You are not associated with this clinic',
+            ], 403);
+        }
+
+        $phone = $this->normalizePhoneNumber($validated['phone']);
+        $existingUser = User::where('phone', $phone)
+            ->where('user_id', '!=', $patient->user_id)
+            ->first();
+
+        if ($existingUser) {
+            return response()->json([
+                'message' => 'Phone number already registered',
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $email = 'patient_' . $validated['nationalId'] . '@clinic.local';
+
+            $patient->user->update([
+                'name' => $validated['name'],
+                'phone' => $phone,
+                'email' => $email,
+            ]);
+
+            $patient->update([
+                'national_id' => $validated['nationalId'],
+                'date_of_birth' => $validated['dateOfBirth'],
+                'gender' => $validated['gender'],
+                'address' => $validated['address'],
+                'blood_type' => !empty($validated['bloodType']) ? $validated['bloodType'] : null,
+                'allergies' => !empty($validated['allergies']) ? $validated['allergies'] : null,
+            ]);
+
+            DB::commit();
+            $patient->load('user');
+
+            return response()->json([
+                'message' => 'Patient updated successfully',
+                'patient' => $patient,
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to update patient',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
 
     /**
      * Search for patients by national ID or phone
