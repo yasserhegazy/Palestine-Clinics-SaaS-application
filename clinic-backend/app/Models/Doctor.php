@@ -138,7 +138,7 @@ class Doctor extends Model
             ->map(function ($appointment) use ($date) {
                 // Use appointment_time if available
                 $time = $appointment->appointment_time;
-                
+
                 if (!$time) {
                     // Fallback: try to parse from appointment_date if it happens to contain time (legacy)
                     // But since appointment_date is cast to date, this might just be 00:00
@@ -157,7 +157,7 @@ class Doctor extends Model
             ->toArray();
 
         // Use TimeSlotGenerator to get available slots
-        $generator = new \App\Helpers\TimeSlotGenerator(
+        $generator = new TimeSlotGenerator(
             $workingTime,
             $this->slot_duration ?? 30,
             $bookedAppointments

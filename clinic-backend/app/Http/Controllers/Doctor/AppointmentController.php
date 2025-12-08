@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Doctor;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Doctor;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,7 +14,7 @@ class AppointmentController extends Controller
     /**
      * Get today's approved appointments for the doctor
      */
-    public function todayAppointments(Request $request)
+public function todayAppointments(Request $request)
     {
         $user = $request->user();
 
@@ -62,6 +63,68 @@ class AppointmentController extends Controller
             'appointments' => $appointments,
             'total' => $appointments->count(),
             'date' => now()->format('Y-m-d'),
+        ], 200);
+    }
+
+    /**
+     * Get upcoming approved appointments for the doctor (after today)
+     */
+    public function upcomingAppointments(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'Doctor') {
+            return response()->json([
+                'message' => 'Only doctors can view their appointments',
+            ], 403);
+        }
+
+        $doctor = Doctor::where('user_id', $user->user_id)->first();
+
+        if (!$doctor) {
+            return response()->json([
+                'message' => 'Doctor profile not found',
+            ], 404);
+        }
+
+        // Get upcoming approved appointments (after today)
+        $appointments = Appointment::where('doctor_id', $doctor->doctor_id)
+            ->where('status', 'Approved')
+            ->whereDate('appointment_date', '>', now()->format('Y-m-d'))
+            ->with(['patient.user', 'clinic'])
+            ->orderBy('appointment_date', 'asc')
+            ->orderBy('appointment_time', 'asc')
+            ->get()
+            ->map(function ($appointment) {
+                $dateTime = null;
+                if ($appointment->appointment_date) {
+                    $dateTime = Carbon::parse($appointment->appointment_date);
+
+                    if ($appointment->appointment_time) {
+                        $dateTime->setTimeFromTimeString($appointment->appointment_time);
+                    }
+
+                    $dateTime = $dateTime->toIso8601String();
+                }
+
+                return [
+                    'id' => $appointment->appointment_id,
+                    'dateTime' => $dateTime,
+                    'status' => strtolower($appointment->status),
+                    'notes' => $appointment->notes,
+                    'patientName' => $appointment->patient?->user?->name ?? 'Unknown',
+                    'patientPhone' => $appointment->patient?->user?->phone ?? null,
+                    'clinicName' => $appointment->clinic?->name ?? null,
+                    'clinicId' => $appointment->clinic_id,
+                    'doctorId' => $appointment->doctor_id,
+                    'patientId' => $appointment->patient_id,
+                ];
+            });
+
+        return response()->json([
+            'appointments' => $appointments,
+            'total' => $appointments->count(),
+            'from_date' => now()->addDay()->format('Y-m-d'),
         ], 200);
     }
 
@@ -188,7 +251,7 @@ class AppointmentController extends Controller
 
         while ($daysSearched < $maxDaysToSearch) {
             $dateString = $searchDate->format('Y-m-d');
-            
+
             // Get available slots for this date
             $availableSlots = $doctor->getAvailableSlots($dateString);
 

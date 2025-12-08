@@ -74,6 +74,9 @@ Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(func
 
     // Today's appointments (approved)
     Route::get('/appointments/today', [DoctorAppointmentController::class, 'todayAppointments']);
+    
+    // Upcoming appointments (approved, after today)
+    Route::get('/appointments/upcoming', [DoctorAppointmentController::class, 'upcomingAppointments']);
 
     // Complete appointment with medical record
     Route::post('/appointments/{appointment_id}/complete', [DoctorAppointmentController::class, 'completeAppointment']);
