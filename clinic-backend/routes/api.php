@@ -104,6 +104,9 @@ Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('manager')->group(fu
     // Update own clinic logo (legacy route - kept for backward compatibility)
     Route::post('/clinic/logo', [ClinicRegistrationController::class, 'updateOwnClinicLogo']);
 
+    // Clinics analytics
+    Route::get('/dashboard/stats', [\App\Http\Controllers\Manager\DashboardController::class, 'stats']);
+    
     // Staff management
     Route::post('/secretaries', [StaffController::class, 'addSecretary']);
     Route::post('/doctors', [StaffController::class, 'addDoctor']);
