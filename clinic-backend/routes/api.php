@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ClinicController as AdminClinicController;
 use App\Http\Controllers\Clinic\AppointmentController;
 use App\Http\Controllers\Clinic\StaffController;
 use App\Http\Controllers\Clinic\PatientController;
+use App\Http\Controllers\Clinic\PaymentController;
 use App\Http\Controllers\Doctor\AppointmentRequestsController;
 use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentController;
 use App\Http\Controllers\Manager\ClinicController as ManagerClinicController;
@@ -18,10 +19,10 @@ Route::options('{any}', function (Request $request) {
 })->where('any', '.*');
 
 // Unified authentication routes (single login endpoint for all users).
-Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
 // Public clinic registration (no auth required)
-Route::post('/register/clinic', [ClinicRegistrationController::class, 'register']);
+Route::post('/register/clinic', [ClinicRegistrationController::class, 'register'])->middleware('throttle:api');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -51,18 +52,27 @@ Route::middleware(['auth:sanctum', 'role:Patient'])->prefix('patient')->group(fu
 });
 
 // Manager and Secretary routes (clinic-specific)
-Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor'])->prefix('clinic')->group(function () {
+Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor', 'throttle:api'])->prefix('clinic')->group(function () {
     // Patient management
-    Route::post('/patients', [PatientController::class, 'createPatient']);
+    Route::post('/patients', [PatientController::class, 'createPatient'])->middleware('throttle:patients');
     Route::put('/patients/{patient_id}', [PatientController::class, 'updatePatient']);
     Route::get('/patients', [PatientController::class, 'index']);
     Route::get('/patients/search', [PatientController::class, 'search']);
     Route::get('/patients/lookup', [PatientController::class, 'searchByIdentifier']);
     Route::get('/patients/{patient_id}', [PatientController::class, 'show']);
-    Route::post('/appointments/create', [AppointmentController::class, 'createAppointmentForPatient']);
+    Route::post('/appointments/create', [AppointmentController::class, 'createAppointmentForPatient'])->middleware('throttle:appointments');
     Route::get('/patients/{id}/history', [PatientController::class, 'history']);
     Route::get('/doctors/{id}/time-slots', [AppointmentController::class, 'getAvailableTimeSlots']);
     Route::get('/doctors', [AppointmentController::class, 'getAvailableDoctors']);
+
+    // Payment management
+    Route::post('/payments', [PaymentController::class, 'store'])->middleware('throttle:payments');
+    Route::get('/payments', [PaymentController::class, 'index']);
+    Route::get('/payments/pending', [PaymentController::class, 'pendingPayments']);
+    Route::get('/payments/daily-report', [PaymentController::class, 'dailyReport']);
+    Route::get('/payments/{payment_id}', [PaymentController::class, 'show']);
+    Route::put('/payments/{payment_id}', [PaymentController::class, 'update'])->middleware('throttle:payments');
+    Route::get('/patients/{patient_id}/payments', [PaymentController::class, 'patientHistory']);
 });
 
 Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(function () {
@@ -104,9 +114,6 @@ Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('manager')->group(fu
     // Update own clinic logo (legacy route - kept for backward compatibility)
     Route::post('/clinic/logo', [ClinicRegistrationController::class, 'updateOwnClinicLogo']);
 
-    // Clinics analytics
-    Route::get('/dashboard/stats', [\App\Http\Controllers\Manager\DashboardController::class, 'stats']);
-    
     // Staff management
     Route::post('/secretaries', [StaffController::class, 'addSecretary']);
     Route::post('/doctors', [StaffController::class, 'addDoctor']);
