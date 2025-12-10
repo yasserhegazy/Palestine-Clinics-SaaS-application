@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Clinic;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AppointmentController extends Controller
 {
@@ -44,7 +47,16 @@ class AppointmentController extends Controller
             'date' => 'required|date|after_or_equal:today',
             'time' => 'required|string',
             'notes' => 'nullable|string|max:500',
+            // Payment fields (optional)
+            'payment' => 'nullable|array',
+            'payment.amount' => 'required_with:payment|numeric|min:0',
+            'payment.amount_paid' => 'nullable|numeric|min:0',
+            'payment.payment_method' => 'required_with:payment|in:Cash,Later,Partial,Exempt',
+            'payment.notes' => 'nullable|string|max:500',
+            'payment.exemption_reason' => 'nullable|string|max:255',
         ]);
+
+        DB::beginTransaction();
 
         try {
             // Get doctor and verify they belong to the same clinic
@@ -70,6 +82,18 @@ class AppointmentController extends Controller
                 ], 422);
             }
 
+            // Determine payment status
+            $paymentStatus = 'Pending';
+            if (isset($validated['payment'])) {
+                $paymentStatus = match ($validated['payment']['payment_method']) {
+                    'Cash' => 'Paid',
+                    'Exempt' => 'Exempt',
+                    'Later' => 'Pending',
+                    'Partial' => 'Partial',
+                    default => 'Pending',
+                };
+            }
+
             // Create appointment
             $appointment = Appointment::create([
                 'clinic_id' => $user->clinic_id,
@@ -80,18 +104,57 @@ class AppointmentController extends Controller
                 'appointment_time' => $validated['time'],
                 'status' => 'Approved',
                 'notes' => $validated['notes'] ?? null,
+                'fee_amount' => $validated['payment']['amount'] ?? $doctor->consultation_fee ?? 0,
+                'payment_status' => $paymentStatus,
             ]);
 
+            $payment = null;
+
+            // Create payment record if payment info provided
+            if (isset($validated['payment'])) {
+                $paymentData = $validated['payment'];
+                $amountPaid = $paymentData['amount_paid'] ?? 0;
+
+                // For cash payments, amount paid equals full amount
+                if ($paymentData['payment_method'] === 'Cash') {
+                    $amountPaid = $paymentData['amount'];
+                }
+
+                // For exempt, no payment needed
+                if ($paymentData['payment_method'] === 'Exempt') {
+                    $amountPaid = 0;
+                }
+
+                $payment = Payment::create([
+                    'appointment_id' => $appointment->appointment_id,
+                    'patient_id' => $validated['patientId'],
+                    'clinic_id' => $user->clinic_id,
+                    'received_by' => $user->user_id,
+                    'amount' => $paymentData['amount'],
+                    'amount_paid' => $amountPaid,
+                    'payment_method' => $paymentData['payment_method'],
+                    'status' => $paymentStatus,
+                    'payment_date' => in_array($paymentStatus, ['Paid', 'Partial']) ? now() : null,
+                    'notes' => $paymentData['notes'] ?? null,
+                    'exemption_reason' => $paymentData['exemption_reason'] ?? null,
+                ]);
+            }
+
+            DB::commit();
+
             // Load relationships
-            $appointment->load(['doctor.user', 'patient.user', 'clinic']);
+            $appointment->load(['doctor.user', 'patient.user', 'clinic', 'payment']);
 
             return response()->json([
                 'message' => 'Appointment created successfully',
                 'appointment' => $appointment,
+                'payment' => $payment,
+                'receipt_number' => $payment?->receipt_number,
             ], 201);
 
         } catch (\Exception $e) {
-            \Log::error('Error creating appointment: ' . $e->getMessage());
+            DB::rollBack();
+            Log::error('Error creating appointment: ' . $e->getMessage());
 
             return response()->json([
                 'message' => 'Failed to create appointment',
