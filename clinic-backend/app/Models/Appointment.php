@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Appointment extends Model
@@ -22,10 +23,13 @@ class Appointment extends Model
         'status',
         'notes',
         'rejection_reason',
+        'fee_amount',
+        'payment_status',
     ];
 
     protected $casts = [
         'appointment_date' => 'date',
+        'fee_amount' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -124,5 +128,29 @@ class Appointment extends Model
     public function isCancelled(): bool
     {
         return $this->status === 'Cancelled';
+    }
+
+    /**
+     * Get the payment for this appointment
+     */
+    public function payment(): HasOne
+    {
+        return $this->hasOne(Payment::class, 'appointment_id', 'appointment_id');
+    }
+
+    /**
+     * Check if appointment is paid
+     */
+    public function isPaid(): bool
+    {
+        return $this->payment_status === 'Paid';
+    }
+
+    /**
+     * Check if appointment payment is exempt
+     */
+    public function isPaymentExempt(): bool
+    {
+        return $this->payment_status === 'Exempt';
     }
 }
