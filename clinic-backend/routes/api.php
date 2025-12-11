@@ -35,6 +35,7 @@ Route::middleware(['auth:sanctum', 'role:Patient', 'throttle:api'])->prefix('pat
     Route::get('/appointments', [\App\Http\Controllers\Patient\AppointmentController::class, 'index']);
     Route::get('/appointments/upcoming', [\App\Http\Controllers\Patient\AppointmentController::class, 'upcoming']);
     Route::get('/appointments/{appointment_id}', [\App\Http\Controllers\Patient\AppointmentController::class, 'show']);
+    Route::put('/appointments/{appointment_id}', [\App\Http\Controllers\Patient\AppointmentController::class, 'update'])->middleware('throttle:appointments');
     Route::post('/appointments/{appointment_id}/cancel', [\App\Http\Controllers\Patient\AppointmentController::class, 'cancel'])->middleware('throttle:appointments');
 
     // Get available doctors
@@ -84,7 +85,7 @@ Route::middleware(['auth:sanctum', 'role:Doctor', 'throttle:api'])->prefix('doct
 
     // Today's appointments (approved)
     Route::get('/appointments/today', [DoctorAppointmentController::class, 'todayAppointments']);
-    
+
     // Upcoming appointments (approved, after today)
     Route::get('/appointments/upcoming', [DoctorAppointmentController::class, 'upcomingAppointments']);
 
@@ -103,6 +104,9 @@ Route::middleware(['auth:sanctum', 'role:Doctor', 'throttle:api'])->prefix('doct
 });
 // Manager-only routes
 Route::middleware(['auth:sanctum', 'role:Manager', 'throttle:api'])->prefix('manager')->group(function () {
+    // Dashboard
+    Route::get('/dashboard/stats', [\App\Http\Controllers\Manager\DashboardController::class, 'stats']);
+
     // Clinic settings management
     Route::get('/clinic/settings', [ManagerClinicController::class, 'getSettings']);
     Route::post('/clinic/settings', [ManagerClinicController::class, 'updateSettings'])->middleware('throttle:settings');

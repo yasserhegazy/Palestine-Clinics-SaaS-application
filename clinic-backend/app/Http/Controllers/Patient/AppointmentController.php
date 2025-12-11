@@ -200,6 +200,96 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Update an appointment (only for pending appointments)
+     */
+    public function update(Request $request, $appointment_id)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'Patient') {
+            return response()->json([
+                'message' => 'Only patients can update their appointments',
+            ], 403);
+        }
+
+        $patient = Patient::where('user_id', $user->user_id)->first();
+        if (!$patient) {
+            return response()->json([
+                'message' => 'Patient record not found',
+            ], 404);
+        }
+
+        $appointment = Appointment::where('appointment_id', $appointment_id)
+            ->where('patient_id', $patient->patient_id)
+            ->first();
+
+        if (!$appointment) {
+            return response()->json([
+                'message' => 'Appointment not found',
+            ], 404);
+        }
+
+        // Can only update pending appointments
+        if (!in_array($appointment->status, ['Requested', 'Pending Doctor Approval'])) {
+            return response()->json([
+                'message' => 'Can only update pending appointments',
+            ], 400);
+        }
+
+        $validated = $request->validate([
+            'doctor_id' => 'sometimes|integer|exists:doctors,doctor_id',
+            'appointment_date' => 'sometimes|date|after:now',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            if (isset($validated['doctor_id']) && $validated['doctor_id'] !== $appointment->doctor_id) {
+                $doctor = Doctor::with('user')->findOrFail($validated['doctor_id']);
+                if ($doctor->user->clinic_id !== $user->clinic_id) {
+                    return response()->json(['message' => 'Doctor does not belong to your clinic'], 400);
+                }
+            }
+
+            if (isset($validated['appointment_date'])) {
+                $doctorId = $validated['doctor_id'] ?? $appointment->doctor_id;
+                $existingAppointment = Appointment::where('doctor_id', $doctorId)
+                    ->where('appointment_date', $validated['appointment_date'])
+                    ->where('appointment_id', '!=', $appointment_id)
+                    ->whereIn('status', ['Requested', 'Pending Doctor Approval', 'Approved'])
+                    ->first();
+
+                if ($existingAppointment) {
+                    throw ValidationException::withMessages([
+                        'appointment_date' => ['This time slot is already booked. Please choose another time.'],
+                    ]);
+                }
+            }
+
+            $appointment->update(array_filter($validated));
+            DB::commit();
+
+            $appointment->load(['doctor.user', 'patient.user', 'clinic']);
+
+            return response()->json([
+                'message' => 'Appointment updated successfully',
+                'appointment' => $appointment,
+            ], 200);
+
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            throw $e;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to update appointment',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Cancel an appointment
      */
     public function cancel(Request $request, $appointment_id)
