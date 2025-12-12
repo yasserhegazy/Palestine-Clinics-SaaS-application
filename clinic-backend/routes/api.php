@@ -7,6 +7,8 @@ use App\Http\Controllers\Clinic\AppointmentController;
 use App\Http\Controllers\Clinic\StaffController;
 use App\Http\Controllers\Clinic\PatientController;
 use App\Http\Controllers\Clinic\PaymentController;
+use App\Http\Controllers\Clinic\ReportController;
+use App\Http\Controllers\Clinic\Reports\RevenueAnalyticsController;
 use App\Http\Controllers\Doctor\AppointmentRequestsController;
 use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentController;
 use App\Http\Controllers\Manager\ClinicController as ManagerClinicController;
@@ -75,6 +77,11 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor', 'throttle:ap
     Route::get('/payments/{payment_id}', [PaymentController::class, 'show']);
     Route::put('/payments/{payment_id}', [PaymentController::class, 'update'])->middleware('throttle:payments');
     Route::get('/patients/{patient_id}/payments', [PaymentController::class, 'patientHistory']);
+    
+    // Reports
+    Route::get('/reports', [ReportController::class, 'index']);
+    Route::get('/reports/daily-financial', [ReportController::class, 'dailyFinancial']);
+    Route::get('/reports/revenue-analytics', [RevenueAnalyticsController::class, 'index']);
 });
 
 // Secretary-specific routes
@@ -82,6 +89,7 @@ Route::middleware(['auth:sanctum', 'role:Secretary', 'throttle:api'])->prefix('s
     // Daily reports
     Route::get('/reports/daily', [DailyReportController::class, 'dailyReport']);
     Route::get('/reports/appointments-summary', [DailyReportController::class, 'appointmentsSummary']);
+    Route::get('/reports/appointments-analytics', [DailyReportController::class, 'appointmentAnalytics']);
 });
 
 Route::middleware(['auth:sanctum', 'role:Doctor', 'throttle:api'])->prefix('doctor')->group(function () {
@@ -120,8 +128,9 @@ Route::middleware(['auth:sanctum', 'role:Manager', 'throttle:api'])->prefix('man
     Route::post('/clinic/settings', [ManagerClinicController::class, 'updateSettings'])->middleware('throttle:settings');
     Route::put('/clinic/settings', [ManagerClinicController::class, 'updateSettings'])->middleware('throttle:settings');
 
-    // Get clinic logo
-    Route::get('/clinic/logo', [ManagerClinicController::class, 'getLogo']);
+    // Get clinic logo (exempt from throttling to avoid UI breakage on frequent reloads)
+    Route::get('/clinic/logo', [ManagerClinicController::class, 'getLogo'])
+        ->withoutMiddleware([\Illuminate\Routing\Middleware\ThrottleRequests::class]);
 
     // Update own clinic logo (legacy route - kept for backward compatibility)
     Route::post('/clinic/logo', [ClinicRegistrationController::class, 'updateOwnClinicLogo'])->middleware('throttle:uploads');

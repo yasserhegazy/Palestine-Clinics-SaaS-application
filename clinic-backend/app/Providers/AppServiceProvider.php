@@ -31,9 +31,9 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
-        // General API rate limit (60 requests per minute per user)
+        // General API rate limit (20 requests per minute per user)
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(20)->by($request->user()?->user_id ?: $request->ip());
+            return Limit::perMinute(30)->by($request->user()?->user_id ?: $request->ip());
         });
 
         // Stricter limit for appointment creation (10 per minute)
