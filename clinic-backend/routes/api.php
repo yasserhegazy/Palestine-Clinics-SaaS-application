@@ -10,6 +10,7 @@ use App\Http\Controllers\Clinic\PaymentController;
 use App\Http\Controllers\Doctor\AppointmentRequestsController;
 use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentController;
 use App\Http\Controllers\Manager\ClinicController as ManagerClinicController;
+use App\Http\Controllers\Secretary\DailyReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -74,6 +75,13 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor', 'throttle:ap
     Route::get('/payments/{payment_id}', [PaymentController::class, 'show']);
     Route::put('/payments/{payment_id}', [PaymentController::class, 'update'])->middleware('throttle:payments');
     Route::get('/patients/{patient_id}/payments', [PaymentController::class, 'patientHistory']);
+});
+
+// Secretary-specific routes
+Route::middleware(['auth:sanctum', 'role:Secretary', 'throttle:api'])->prefix('secretary')->group(function () {
+    // Daily reports
+    Route::get('/reports/daily', [DailyReportController::class, 'dailyReport']);
+    Route::get('/reports/appointments-summary', [DailyReportController::class, 'appointmentsSummary']);
 });
 
 Route::middleware(['auth:sanctum', 'role:Doctor', 'throttle:api'])->prefix('doctor')->group(function () {
