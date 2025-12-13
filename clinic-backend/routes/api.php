@@ -6,9 +6,13 @@ use App\Http\Controllers\Admin\ClinicController as AdminClinicController;
 use App\Http\Controllers\Clinic\AppointmentController;
 use App\Http\Controllers\Clinic\StaffController;
 use App\Http\Controllers\Clinic\PatientController;
+use App\Http\Controllers\Clinic\PaymentController;
+use App\Http\Controllers\Clinic\ReportController;
+use App\Http\Controllers\Clinic\Reports\RevenueAnalyticsController;
 use App\Http\Controllers\Doctor\AppointmentRequestsController;
 use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentController;
 use App\Http\Controllers\Manager\ClinicController as ManagerClinicController;
+use App\Http\Controllers\Secretary\DailyReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -18,23 +22,24 @@ Route::options('{any}', function (Request $request) {
 })->where('any', '.*');
 
 // Unified authentication routes (single login endpoint for all users).
-Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
 // Public clinic registration (no auth required)
-Route::post('/register/clinic', [ClinicRegistrationController::class, 'register']);
+Route::post('/register/clinic', [ClinicRegistrationController::class, 'register'])->middleware('throttle:registration');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 });
 
 // Patient routes
-Route::middleware(['auth:sanctum', 'role:Patient'])->prefix('patient')->group(function () {
+Route::middleware(['auth:sanctum', 'role:Patient', 'throttle:api'])->prefix('patient')->group(function () {
     // Appointment management
-    Route::post('/appointments', [\App\Http\Controllers\Patient\AppointmentController::class, 'createAppointment']);
+    Route::post('/appointments', [\App\Http\Controllers\Patient\AppointmentController::class, 'createAppointment'])->middleware('throttle:appointments');
     Route::get('/appointments', [\App\Http\Controllers\Patient\AppointmentController::class, 'index']);
     Route::get('/appointments/upcoming', [\App\Http\Controllers\Patient\AppointmentController::class, 'upcoming']);
     Route::get('/appointments/{appointment_id}', [\App\Http\Controllers\Patient\AppointmentController::class, 'show']);
-    Route::post('/appointments/{appointment_id}/cancel', [\App\Http\Controllers\Patient\AppointmentController::class, 'cancel']);
+    Route::put('/appointments/{appointment_id}', [\App\Http\Controllers\Patient\AppointmentController::class, 'update'])->middleware('throttle:appointments');
+    Route::post('/appointments/{appointment_id}/cancel', [\App\Http\Controllers\Patient\AppointmentController::class, 'cancel'])->middleware('throttle:appointments');
 
     // Get available doctors
     Route::get('/doctors', [\App\Http\Controllers\Patient\AppointmentController::class, 'getAvailableDoctors']);
@@ -51,71 +56,94 @@ Route::middleware(['auth:sanctum', 'role:Patient'])->prefix('patient')->group(fu
 });
 
 // Manager and Secretary routes (clinic-specific)
-Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor'])->prefix('clinic')->group(function () {
+Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor', 'throttle:api'])->prefix('clinic')->group(function () {
     // Patient management
-    Route::post('/patients', [PatientController::class, 'createPatient']);
+    Route::post('/patients', [PatientController::class, 'createPatient'])->middleware('throttle:patients');
     Route::put('/patients/{patient_id}', [PatientController::class, 'updatePatient']);
     Route::get('/patients', [PatientController::class, 'index']);
     Route::get('/patients/search', [PatientController::class, 'search']);
     Route::get('/patients/lookup', [PatientController::class, 'searchByIdentifier']);
     Route::get('/patients/{patient_id}', [PatientController::class, 'show']);
-    Route::post('/appointments/create', [AppointmentController::class, 'createAppointmentForPatient']);
+    Route::post('/appointments/create', [AppointmentController::class, 'createAppointmentForPatient'])->middleware('throttle:appointments');
     Route::get('/patients/{id}/history', [PatientController::class, 'history']);
     Route::get('/doctors/{id}/time-slots', [AppointmentController::class, 'getAvailableTimeSlots']);
     Route::get('/doctors', [AppointmentController::class, 'getAvailableDoctors']);
+
+    // Payment management
+    Route::post('/payments', [PaymentController::class, 'store'])->middleware('throttle:payments');
+    Route::get('/payments', [PaymentController::class, 'index']);
+    Route::get('/payments/pending', [PaymentController::class, 'pendingPayments']);
+    Route::get('/payments/daily-report', [PaymentController::class, 'dailyReport']);
+    Route::get('/payments/{payment_id}', [PaymentController::class, 'show']);
+    Route::put('/payments/{payment_id}', [PaymentController::class, 'update'])->middleware('throttle:payments');
+    Route::get('/patients/{patient_id}/payments', [PaymentController::class, 'patientHistory']);
+    
+    // Reports
+    Route::get('/reports', [ReportController::class, 'index']);
+    Route::get('/reports/daily-financial', [ReportController::class, 'dailyFinancial']);
+    Route::get('/reports/revenue-analytics', [RevenueAnalyticsController::class, 'index']);
 });
 
-Route::middleware(['auth:sanctum', 'role:Doctor'])->prefix('doctor')->group(function () {
+// Secretary-specific routes
+Route::middleware(['auth:sanctum', 'role:Secretary', 'throttle:api'])->prefix('secretary')->group(function () {
+    // Daily reports
+    Route::get('/reports/daily', [DailyReportController::class, 'dailyReport']);
+    Route::get('/reports/appointments-summary', [DailyReportController::class, 'appointmentsSummary']);
+    Route::get('/reports/appointments-analytics', [DailyReportController::class, 'appointmentAnalytics']);
+});
+
+Route::middleware(['auth:sanctum', 'role:Doctor', 'throttle:api'])->prefix('doctor')->group(function () {
     // Appointment requests (pending approval)
     Route::get('/appointments/requests', [AppointmentRequestsController::class, 'index']);
-    Route::put('/appointments/approve/{appointment_id}', [AppointmentRequestsController::class, 'approve']);
-    Route::put('/appointments/reject/{appointment_id}', [AppointmentRequestsController::class, 'reject']);
-    Route::put('/appointments/reschedule/{appointment_id}', [AppointmentRequestsController::class, 'reschedule']);
+    Route::put('/appointments/approve/{appointment_id}', [AppointmentRequestsController::class, 'approve'])->middleware('throttle:doctor-actions');
+    Route::put('/appointments/reject/{appointment_id}', [AppointmentRequestsController::class, 'reject'])->middleware('throttle:doctor-actions');
+    Route::put('/appointments/reschedule/{appointment_id}', [AppointmentRequestsController::class, 'reschedule'])->middleware('throttle:doctor-actions');
 
     // Today's appointments (approved)
     Route::get('/appointments/today', [DoctorAppointmentController::class, 'todayAppointments']);
-    
+
     // Upcoming appointments (approved, after today)
     Route::get('/appointments/upcoming', [DoctorAppointmentController::class, 'upcomingAppointments']);
 
     // Complete appointment with medical record
-    Route::post('/appointments/{appointment_id}/complete', [DoctorAppointmentController::class, 'completeAppointment']);
+    Route::post('/appointments/{appointment_id}/complete', [DoctorAppointmentController::class, 'completeAppointment'])->middleware('throttle:medical-records');
 
     // All appointments (with optional filters)
     Route::get('/appointments', [DoctorAppointmentController::class, 'index']);
 
     // Medical Records (full CRUD for doctors)
     Route::get('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'index']);
-    Route::post('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'store']);
+    Route::post('/medical-records', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'store'])->middleware('throttle:medical-records');
     Route::get('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'show']);
-    Route::put('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'update']);
-    Route::delete('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'destroy']);
+    Route::put('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'update'])->middleware('throttle:medical-records');
+    Route::delete('/medical-records/{record_id}', [\App\Http\Controllers\Doctor\MedicalRecordController::class, 'destroy'])->middleware('throttle:medical-records');
 });
 // Manager-only routes
-Route::middleware(['auth:sanctum', 'role:Manager'])->prefix('manager')->group(function () {
+Route::middleware(['auth:sanctum', 'role:Manager', 'throttle:api'])->prefix('manager')->group(function () {
+    // Dashboard
+    Route::get('/dashboard/stats', [\App\Http\Controllers\Manager\DashboardController::class, 'stats']);
+
     // Clinic settings management
     Route::get('/clinic/settings', [ManagerClinicController::class, 'getSettings']);
-    Route::post('/clinic/settings', [ManagerClinicController::class, 'updateSettings']);
-    Route::put('/clinic/settings', [ManagerClinicController::class, 'updateSettings']); // Keep PUT for backward compatibility
+    Route::post('/clinic/settings', [ManagerClinicController::class, 'updateSettings'])->middleware('throttle:settings');
+    Route::put('/clinic/settings', [ManagerClinicController::class, 'updateSettings'])->middleware('throttle:settings');
 
-    // Get clinic logo
-    Route::get('/clinic/logo', [ManagerClinicController::class, 'getLogo']);
+    // Get clinic logo (exempt from throttling to avoid UI breakage on frequent reloads)
+    Route::get('/clinic/logo', [ManagerClinicController::class, 'getLogo'])
+        ->withoutMiddleware([\Illuminate\Routing\Middleware\ThrottleRequests::class]);
 
     // Update own clinic logo (legacy route - kept for backward compatibility)
-    Route::post('/clinic/logo', [ClinicRegistrationController::class, 'updateOwnClinicLogo']);
+    Route::post('/clinic/logo', [ClinicRegistrationController::class, 'updateOwnClinicLogo'])->middleware('throttle:uploads');
 
-    // Clinics analytics
-    Route::get('/dashboard/stats', [\App\Http\Controllers\Manager\DashboardController::class, 'stats']);
-    
     // Staff management
-    Route::post('/secretaries', [StaffController::class, 'addSecretary']);
-    Route::post('/doctors', [StaffController::class, 'addDoctor']);
+    Route::post('/secretaries', [StaffController::class, 'addSecretary'])->middleware('throttle:staff');
+    Route::post('/doctors', [StaffController::class, 'addDoctor'])->middleware('throttle:staff');
     Route::get('/staff', [StaffController::class, 'index']);
-    Route::put('/staff/{user_id}', [StaffController::class, 'update_member']);
-    Route::delete('/staff/{user_id}', [StaffController::class, 'delete_member']);
+    Route::put('/staff/{user_id}', [StaffController::class, 'update_member'])->middleware('throttle:staff');
+    Route::delete('/staff/{user_id}', [StaffController::class, 'delete_member'])->middleware('throttle:staff');
 });
 
-Route::middleware(['auth:sanctum', 'role:Admin'])->prefix('admin')->group(function () {
+Route::middleware(['auth:sanctum', 'role:Admin', 'throttle:admin'])->prefix('admin')->group(function () {
     // Dashboard
     Route::get('/dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'stats']);
 
@@ -128,5 +156,5 @@ Route::middleware(['auth:sanctum', 'role:Admin'])->prefix('admin')->group(functi
     Route::delete('/clinics/{id}', [AdminClinicController::class, 'destroy']);
 
     // Update clinic logo
-    Route::post('/clinics/{clinic_id}/logo', [ClinicRegistrationController::class, 'updateLogo']);
+    Route::post('/clinics/{clinic_id}/logo', [ClinicRegistrationController::class, 'updateLogo'])->middleware('throttle:uploads');
 });

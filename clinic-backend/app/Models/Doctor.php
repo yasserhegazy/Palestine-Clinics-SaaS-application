@@ -22,6 +22,7 @@ class Doctor extends Model
         'start_time',
         'end_time',
         'slot_duration',
+        'consultation_fee',
     ];
 
     protected $casts = [
@@ -29,6 +30,7 @@ class Doctor extends Model
         'updated_at' => 'datetime',
         'start_time' => 'datetime:H:i',
         'end_time' => 'datetime:H:i',
+        'consultation_fee' => 'decimal:2',
     ];
 
     /**
