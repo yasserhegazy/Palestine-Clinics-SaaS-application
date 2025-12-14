@@ -137,13 +137,13 @@ The API will be available at `http://127.0.0.1:8000`
 
 ### Default Credentials (Seeded Data)
 
-| Role           | Email               | Password     |
-| :------------- | :------------------ | :----------- |
-| Platform Admin | admin@platform.com  | admin123     |
-| Clinic Manager | manager@clinic.ps   | manager123   |
-| Doctor         | doctor@clinic.ps    | doctor123    |
-| Secretary      | secretary@clinic.ps | secretary123 |
-| Patient        | patient@clinic.ps   | patient123   |
+| Role           | Email                 | Password     |
+| :------------- | :-------------------- | :----------- |
+| Platform Admin | admin@platform.com    | password     |
+| Clinic Manager | manager@clinic.com    | password     |
+| Doctor         | doctor1@clinic.com    | password     |
+| Secretary      | secretary1@clinic.com | password     |
+| Patient        | patient1@clinic.com   | password     |
 
 ## 📚 API Documentation
 
