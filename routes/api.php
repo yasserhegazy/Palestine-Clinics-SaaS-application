@@ -77,7 +77,7 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor', 'throttle:ap
     Route::get('/payments/{payment_id}', [PaymentController::class, 'show']);
     Route::put('/payments/{payment_id}', [PaymentController::class, 'update'])->middleware('throttle:payments');
     Route::get('/patients/{patient_id}/payments', [PaymentController::class, 'patientHistory']);
-    
+
     // Reports
     Route::get('/reports', [ReportController::class, 'index']);
     Route::get('/reports/daily-financial', [ReportController::class, 'dailyFinancial']);
