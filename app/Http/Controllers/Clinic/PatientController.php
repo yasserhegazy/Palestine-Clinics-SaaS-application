@@ -3,430 +3,143 @@
 namespace App\Http\Controllers\Clinic;
 
 use App\Http\Controllers\Controller;
-use App\Models\MedicalRecord;
-use App\Models\User;
-use App\Models\Patient;
+use App\Http\Requests\Clinic\Patient\PatientIdentifierSearchRequest;
+use App\Http\Requests\Clinic\Patient\PatientSearchRequest;
+use App\Http\Requests\Clinic\Patient\StorePatientRequest;
+use App\Http\Requests\Clinic\Patient\UpdatePatientRequest;
+use App\Http\Resources\MedicalRecord\MedicalRecordResource;
+use App\Http\Resources\Patient\PatientResource;
+use App\Http\Resources\Patient\PatientSummaryResource;
+use App\Services\Clinic\PatientService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class PatientController extends Controller
 {
-    /**
-     * Create a new patient and user account
-     */
-    public function createPatient(Request $request)
+    public function __construct(private readonly PatientService $patientService)
     {
-        // Log incoming request data for debugging
+    }
+
+    /**
+     * Create a new patient and user account.
+     */
+    public function createPatient(StorePatientRequest $request): JsonResponse
+    {
         Log::info('Patient creation request', ['data' => $request->all()]);
 
-        try {
-            $validated = $request->validate([
-                'name' => 'required|string|max:100',
-                'nationalId' => 'required|string|max:20|unique:patients,national_id',
-                'phone' => 'required|string|max:20',
-                'dateOfBirth' => 'required|date|before_or_equal:today',
-                'gender' => 'required|in:Male,Female,Other',
-                'address' => 'required|string|max:255',
-                'bloodType' => 'nullable|string|max:5',
-                'allergies' => 'nullable|string',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Validation failed', ['errors' => $e->errors()]);
-            throw $e;
-        }
-
-        $user = $request->user();
-
-        $phone = $this->normalizePhoneNumber($validated['phone']);
-
-        // Ensure user (Secretary/Manager) has a clinic
-        if (!$user->clinic_id) {
-            return response()->json([
-                'message' => 'You are not associated with any clinic',
-            ], 403);
-        }
-
-        // Check if phone is already registered
-        $existingUser = User::where('phone', $phone)->first();
-        if ($existingUser) {
-            return response()->json([
-                'message' => 'Phone number already registered',
-            ], 422);
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // Generate a random 8-character password
-            $temporaryPassword = 12345678;
-
-            // Generate email from national ID if not provided
-            $email = 'patient_' . $validated['nationalId'] . '@clinic.local';
-
-            // Create user account for patient
-            $patientUser = User::create([
-                'clinic_id' => $user->clinic_id,
-                'name' => $validated['name'],
-                'email' => $email,
-                'phone' => $phone, // Use normalized phone
-                'password_hash' => Hash::make($temporaryPassword),
-                'role' => 'Patient',
-                'status' => 'Active',
-            ]);
-
-            // Create patient profile
-            $patient = Patient::create([
-                'user_id' => $patientUser->user_id,
-                'national_id' => $validated['nationalId'],
-                'date_of_birth' => $validated['dateOfBirth'],
-                'gender' => $validated['gender'],
-                'address' => $validated['address'],
-                'blood_type' => !empty($validated['bloodType']) ? $validated['bloodType'] : null,
-                'allergies' => !empty($validated['allergies']) ? $validated['allergies'] : null,
-            ]);
-
-            DB::commit();
-
-            // Load user relationship for full data
-            $patient->load('user');
-
-            // TODO: Send SMS with temporary password to phone number
-            // This would integrate with an SMS service like Twilio
-            // For now, we'll return it in the response
-
-            return response()->json([
-                'message' => 'Patient created successfully',
-                'patient' => $patient,
-                'user' => $patientUser,
-                'temporary_password' => $temporaryPassword,
-                'sms_sent' => false, // Will be true when SMS integration is added
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'message' => 'Failed to create patient',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get all patients for the current clinic
-     */
-    public function index(Request $request)
-    {
-        $user = $request->user();
-
-        if (!$user->clinic_id) {
-            return response()->json([
-                'message' => 'You are not associated with any clinic',
-            ], 403);
-        }
-
-        $patients = Patient::with('user')
-            ->whereHas('user', function ($query) use ($user) {
-                $query->where('clinic_id', $user->clinic_id);
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
-
-        return response()->json($patients);
-    }
-
-    /**
-     * Get a specific patient
-     */
-    public function show(Request $request, $id)
-    {
-        $user = $request->user();
-
-        if (!$user->clinic_id) {
-            return response()->json([
-                'message' => 'You are not associated with any clinic',
-            ], 403);
-        }
-
-        $patient = Patient::with('user')
-            ->whereHas('user', function ($query) use ($user) {
-                $query->where('clinic_id', $user->clinic_id);
-            })
-            ->findOrFail($id);
-
-        return response()->json($patient);
-    }
-    public function updatePatient(Request $request, $patient_id)
-    {
-        $validated = $request->validate([
-            'patient_id' => 'required|integer|exists:patients,patient_id',
-            'name' => 'required|string|max:100',
-            'nationalId' => 'required|string|max:20|unique:patients,national_id,' . $request->input('patient_id') . ',patient_id',
-            'phone' => 'required|string|max:20',
-            'dateOfBirth' => 'required|date|before_or_equal:today',
-            'gender' => 'required|in:Male,Female,Other',
-            'address' => 'required|string|max:255',
-            'bloodType' => 'nullable|string|max:5',
-            'allergies' => 'nullable|string',
-        ]);
-
-        $user = $request->user();
-        $patient = Patient::with('user')->findOrFail($validated['patient_id']);
-
-        if (!$user->clinic_id || !$patient->user || $patient->user->clinic_id !== $user->clinic_id) {
-            return response()->json([
-                'message' => 'You are not associated with this clinic',
-            ], 403);
-        }
-
-        $phone = $this->normalizePhoneNumber($validated['phone']);
-        $existingUser = User::where('phone', $phone)
-            ->where('user_id', '!=', $patient->user_id)
-            ->first();
-
-        if ($existingUser) {
-            return response()->json([
-                'message' => 'Phone number already registered',
-            ], 422);
-        }
-
-        DB::beginTransaction();
-
-        try {
-            $email = 'patient_' . $validated['nationalId'] . '@clinic.local';
-
-            $patient->user->update([
-                'name' => $validated['name'],
-                'phone' => $phone,
-                'email' => $email,
-            ]);
-
-            $patient->update([
-                'national_id' => $validated['nationalId'],
-                'date_of_birth' => $validated['dateOfBirth'],
-                'gender' => $validated['gender'],
-                'address' => $validated['address'],
-                'blood_type' => !empty($validated['bloodType']) ? $validated['bloodType'] : null,
-                'allergies' => !empty($validated['allergies']) ? $validated['allergies'] : null,
-            ]);
-
-            DB::commit();
-            $patient->load('user');
-
-            return response()->json([
-                'message' => 'Patient updated successfully',
-                'patient' => $patient,
-            ], 200);
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'message' => 'Failed to update patient',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-
-
-    /**
-     * Search for patients by national ID or phone
-     */
-    public function search(Request $request)
-    {
-        $validated = $request->validate([
-            'query' => 'required|string|min:3',
-        ]);
-
-        $user = $request->user();
-
-        if (!$user->clinic_id) {
-            return response()->json([
-                'message' => 'You are not associated with any clinic',
-            ], 403);
-        }
-
-        $query = $validated['query'];
-
-        $patients = Patient::with('user')
-            ->where(function ($q) use ($query) {
-                $q->where('national_id', 'like', "%{$query}%");
-            })
-            ->orWhereHas('user', function ($q) use ($query, $user) {
-                $q->where('clinic_id', $user->clinic_id)
-                  ->where(function ($subQ) use ($query) {
-                      $subQ->where('phone', 'like', "%{$query}%")
-                           ->orWhere('name', 'like', "%{$query}%");
-                  });
-            })
-            ->limit(10)
-            ->get();
-
-        return response()->json($patients);
-    }
-
-    /**
-     * Search for patients using a single identifier field (national ID or phone prefix)
-     */
-    public function searchByIdentifier(Request $request)
-    {
-        $validated = $request->validate([
-            'identifier' => 'required|string|min:3|max:25',
-        ]);
-
-        $user = $request->user();
-
-        if (!$user->clinic_id) {
-            return response()->json([
-                'message' => 'You are not associated with any clinic',
-            ], 403);
-        }
-
-        $identifier = trim($validated['identifier']);
-        $phoneFragments = $this->buildPhoneSearchFragments($identifier);
-
-        $patients = Patient::with('user')
-            ->whereHas('user', function ($query) use ($user) {
-                $query->where('clinic_id', $user->clinic_id);
-            })
-            ->where(function ($query) use ($identifier, $phoneFragments) {
-                $query->where('national_id', 'like', "{$identifier}%")
-                      ->orWhereHas('user', function ($userQuery) use ($identifier, $phoneFragments) {
-                          $userQuery->where(function ($phoneMatch) use ($identifier, $phoneFragments) {
-                              $phoneMatch->where('phone', 'like', "{$identifier}%");
-                              foreach ($phoneFragments as $fragment) {
-                                  $phoneMatch->orWhere('phone', 'like', "{$fragment}%");
-                              }
-                          });
-                      });
-            })
-            ->orderBy('patients.created_at', 'desc')
-            ->limit(5)
-            ->get();
+        $result = $this->patientService->create($request->user(), $request->patientData());
 
         return response()->json([
-            'patients' => $patients,
+            'success' => true,
+            'message' => 'Patient created successfully.',
+            'data' => [
+                'patient' => new PatientResource($result['patient']),
+                'temporary_password' => $result['temporary_password'],
+                'sms_sent' => false,
+            ],
+        ], 201);
+    }
+
+    /**
+     * Get all patients for the current clinic.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $patients = $this->patientService->paginate($request->user(), 20);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Patients retrieved successfully.',
+            'data' => [
+                'patients' => PatientSummaryResource::collection($patients),
+                'pagination' => [
+                    'current_page' => $patients->currentPage(),
+                    'per_page' => $patients->perPage(),
+                    'total' => $patients->total(),
+                    'last_page' => $patients->lastPage(),
+                ],
+            ],
         ]);
     }
 
     /**
-     * Normalize phone numbers to the +970 format
+     * Get a specific patient.
      */
-    private function normalizePhoneNumber(string $phone): string
+    public function show(Request $request, int $id): JsonResponse
     {
-        $phone = trim($phone);
+        $patient = $this->patientService->show($request->user(), $id);
 
-        if ($phone === '') {
-            return $phone;
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Patient retrieved successfully.',
+            'data' => new PatientResource($patient),
+        ]);
+    }
 
-        if (str_starts_with($phone, '0')) {
-            return '+970' . substr($phone, 1);
-        }
+    public function updatePatient(UpdatePatientRequest $request, int $patient_id): JsonResponse
+    {
+        $patient = $this->patientService->update($request->user(), $patient_id, $request->patientData());
 
-        if (!str_starts_with($phone, '+')) {
-            return '+970' . $phone;
-        }
-
-        return $phone;
+        return response()->json([
+            'success' => true,
+            'message' => 'Patient updated successfully.',
+            'data' => new PatientResource($patient),
+        ]);
     }
 
     /**
-     * Build phone fragments to allow loose matching for lookup
+     * Search for patients by national ID or phone.
      */
-    private function buildPhoneSearchFragments(string $identifier): array
+    public function search(PatientSearchRequest $request): JsonResponse
     {
-        $fragments = [];
-        $trimmed = trim($identifier);
+        $patients = $this->patientService->search($request->user(), $request->searchQuery());
 
-        if ($trimmed !== '') {
-            $fragments[] = $trimmed;
-        }
-
-        $normalized = $this->normalizePhoneNumber($trimmed);
-        if ($normalized !== '' && $normalized !== $trimmed) {
-            $fragments[] = $normalized;
-        }
-
-        $digitsOnly = preg_replace('/\D+/', '', $trimmed);
-        if (!empty($digitsOnly)) {
-            $fragments[] = $digitsOnly;
-
-            if (str_starts_with($digitsOnly, '970')) {
-                $fragments[] = '+' . $digitsOnly;
-                $fragments[] = '0' . substr($digitsOnly, 3);
-            } elseif (str_starts_with($digitsOnly, '0')) {
-                $fragments[] = '+970' . substr($digitsOnly, 1);
-            } else {
-                $fragments[] = '+970' . $digitsOnly;
-                $fragments[] = '0' . $digitsOnly;
-            }
-        }
-
-        return array_values(array_unique(array_filter($fragments, function ($fragment) {
-            return $fragment !== null && $fragment !== '';
-        })));
+        return response()->json([
+            'success' => true,
+            'message' => 'Patients search completed successfully.',
+            'data' => PatientSummaryResource::collection($patients),
+        ]);
     }
+
     /**
-     * Get patient medical history (previous visits)
+     * Search for patients using a single identifier field (national ID or phone prefix).
      */
-    public function history(Request $request, $id)
+    public function searchByIdentifier(PatientIdentifierSearchRequest $request): JsonResponse
     {
-        $user = $request->user();
+        return response()->json([
+            'success' => true,
+            'message' => 'Patients lookup completed successfully.',
+            'data' => PatientSummaryResource::collection(
+                $this->patientService->searchByIdentifier(
+                    $request->user(),
+                    $request->identifier()
+                )
+            ),
+        ]);
+    }
 
-        if (!$user->clinic_id) {
-            return response()->json([
-                'message' => 'You are not associated with any clinic',
-            ], 403);
-        }
-
-        // Verify patient belongs to this clinic and load user relationship
-        $patient = Patient::where('patient_id', $id)
-            ->whereHas('user', function ($query) use ($user) {
-                $query->where('clinic_id', $user->clinic_id);
-            })
-            ->with('user')
-            ->firstOrFail();
-
+    /**
+     * Get patient medical history (previous visits).
+     */
+    public function history(Request $request, int $id): JsonResponse
+    {
         // Log for debugging
         Log::info("Fetching medical history for patient_id: {$id}");
 
-        $medicalRecords = MedicalRecord::where('patient_id', $id)
-            ->with(['doctor.user', 'patient.user.clinic'])
-            ->orderBy('visit_date', 'desc')
-            ->get();
+        $history = $this->patientService->history($request->user(), $id);
 
-        Log::info("Found {$medicalRecords->count()} medical records for patient {$id}");
-
-        $medicalHistory = $medicalRecords->map(function ($record) {
-            return [
-                'id' => $record->record_id,
-                'visit_date' => $record->visit_date ? $record->visit_date->format('Y-m-d') : null,
-                'symptoms' => $record->symptoms ?? '',
-                'diagnosis' => $record->diagnosis ?? '',
-                'prescription' => $record->prescription ?? '',
-                'doctor_name' => data_get($record, 'doctor.user.name', 'Unknown Doctor'),
-                'created_at' => $record->created_at ? $record->created_at->toISOString() : null,
-            ];
-        });
+        Log::info("Found {$history['medical_records']->count()} medical records for patient {$id}");
 
         return response()->json([
-            'patient' => [
-                'patient_id' => $patient->patient_id,
-                'date_of_birth' => $patient->date_of_birth,
-                'gender' => $patient->gender,
-                'blood_type' => $patient->blood_type,
-                'allergies' => $patient->allergies,
-                'user' => [
-                    'name' => $patient->user->name,
-                    'phone' => $patient->user->phone,
-                    'email' => $patient->user->email,
-                ],
+            'success' => true,
+            'message' => 'Patient medical history retrieved successfully.',
+            'data' => [
+                'patient' => new PatientResource($history['patient']),
+                'medical_history' => MedicalRecordResource::collection(
+                    $history['medical_records']->loadMissing(['doctor.user', 'patient.user'])
+                ),
             ],
-            'medicalHistory' => $medicalHistory,
         ]);
     }
 }

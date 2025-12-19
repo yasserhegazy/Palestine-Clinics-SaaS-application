@@ -3,371 +3,119 @@
 namespace App\Http\Controllers\Patient;
 
 use App\Http\Controllers\Controller;
-use App\Models\Appointment;
-use App\Models\Patient;
-use App\Models\Doctor;
-use App\Models\User;
+use App\Http\Requests\Patient\Appointment\StorePatientAppointmentRequest;
+use App\Http\Requests\Patient\Appointment\UpdatePatientAppointmentRequest;
+use App\Http\Resources\Appointment\AppointmentResource;
+use App\Http\Resources\Doctor\DoctorSummaryResource;
+use App\Services\Patient\PatientAppointmentService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
 {
+    public function __construct(private readonly PatientAppointmentService $appointmentService)
+    {
+    }
+
     /**
      * Create a new appointment request by patient
      */
-    public function createAppointment(Request $request)
+    public function createAppointment(StorePatientAppointmentRequest $request): JsonResponse
     {
-        $user = $request->user();
+        $appointment = $this->appointmentService->create($request->user(), $request->payload());
 
-        // Verify user is a patient
-        if ($user->role !== 'Patient') {
-            return response()->json([
-                'message' => 'Only patients can create appointments',
-            ], 403);
-        }
-
-        // Get patient record
-        $patient = Patient::where('user_id', $user->user_id)->first();
-        if (!$patient) {
-            return response()->json([
-                'message' => 'Patient record not found',
-            ], 404);
-        }
-
-        // Validate request
-        $validated = $request->validate([
-            'doctor_id' => 'required|integer|exists:doctors,doctor_id',
-            'appointment_date' => 'required|date|after:now',
-            'notes' => 'nullable|string|max:500',
-        ]);
-
-        // Get doctor and verify they belong to the same clinic
-        $doctor = Doctor::with('user')->findOrFail($validated['doctor_id']);
-
-        if ($doctor->user->clinic_id !== $user->clinic_id) {
-            return response()->json([
-                'message' => 'Doctor does not belong to your clinic',
-            ], 400);
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // Check for conflicting appointments for the same doctor at the same time
-            $existingAppointment = Appointment::where('doctor_id', $validated['doctor_id'])
-                ->where('appointment_date', $validated['appointment_date'])
-                ->whereIn('status', ['Requested', 'Pending Doctor Approval', 'Approved'])
-                ->first();
-
-            if ($existingAppointment) {
-                throw ValidationException::withMessages([
-                    'appointment_date' => ['This time slot is already booked. Please choose another time.'],
-                ]);
-            }
-
-            // Create appointment with status 'Requested'
-            $appointment = Appointment::create([
-                'clinic_id' => $user->clinic_id,
-                'doctor_id' => $validated['doctor_id'],
-                'patient_id' => $patient->patient_id,
-                'secretary_id' => null, // Patient creates their own appointment
-                'appointment_date' => $validated['appointment_date'],
-                'status' => 'Requested',
-                'notes' => $validated['notes'] ?? null,
-            ]);
-
-            DB::commit();
-
-            // Load relationships
-            $appointment->load(['doctor.user', 'patient.user', 'clinic']);
-
-            return response()->json([
-                'message' => 'Appointment request created successfully. You will be notified when it is approved.',
-                'appointment' => $appointment,
-            ], 201);
-
-        } catch (ValidationException $e) {
-            DB::rollBack();
-            throw $e;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Failed to create appointment',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Appointment request created successfully. You will be notified when it is approved.',
+            'data' => new AppointmentResource($appointment),
+        ], 201);
     }
 
     /**
      * Get all appointments for the authenticated patient
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        if ($user->role !== 'Patient') {
-            return response()->json([
-                'message' => 'Only patients can view their appointments',
-            ], 403);
-        }
-
-        $patient = Patient::where('user_id', $user->user_id)->first();
-        if (!$patient) {
-            return response()->json([
-                'message' => 'Patient record not found',
-            ], 404);
-        }
-
-        // Get appointments with relationships
-        $appointments = Appointment::where('patient_id', $patient->patient_id)
-            ->with(['doctor.user', 'clinic'])
-            ->orderBy('appointment_date', 'desc')
-            ->get();
-
         return response()->json([
-            'appointments' => $appointments,
+            'success' => true,
+            'message' => 'Appointments retrieved successfully.',
+            'data' => AppointmentResource::collection(
+                $this->appointmentService->list($request->user())
+            ),
         ], 200);
     }
 
     /**
      * Get upcoming appointments for the authenticated patient
      */
-    public function upcoming(Request $request)
+    public function upcoming(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        if ($user->role !== 'Patient') {
-            return response()->json([
-                'message' => 'Only patients can view their appointments',
-            ], 403);
-        }
-
-        $patient = Patient::where('user_id', $user->user_id)->first();
-        if (!$patient) {
-            return response()->json([
-                'message' => 'Patient record not found',
-            ], 404);
-        }
-
-        // Get upcoming appointments
-        $appointments = Appointment::where('patient_id', $patient->patient_id)
-            ->where('appointment_date', '>', now())
-            ->whereIn('status', ['Requested', 'Pending Doctor Approval', 'Approved'])
-            ->with(['doctor.user', 'clinic'])
-            ->orderBy('appointment_date', 'asc')
-            ->get();
-
         return response()->json([
-            'appointments' => $appointments,
+            'success' => true,
+            'message' => 'Upcoming appointments retrieved successfully.',
+            'data' => AppointmentResource::collection(
+                $this->appointmentService->upcoming($request->user())
+            ),
         ], 200);
     }
 
     /**
      * Get a specific appointment
      */
-    public function show(Request $request, $appointment_id)
+    public function show(Request $request, int $appointment_id): JsonResponse
     {
-        $user = $request->user();
-
-        if ($user->role !== 'Patient') {
-            return response()->json([
-                'message' => 'Only patients can view their appointments',
-            ], 403);
-        }
-
-        $patient = Patient::where('user_id', $user->user_id)->first();
-        if (!$patient) {
-            return response()->json([
-                'message' => 'Patient record not found',
-            ], 404);
-        }
-
-        $appointment = Appointment::where('appointment_id', $appointment_id)
-            ->where('patient_id', $patient->patient_id)
-            ->with(['doctor.user', 'clinic', 'secretary'])
-            ->first();
-
-        if (!$appointment) {
-            return response()->json([
-                'message' => 'Appointment not found',
-            ], 404);
-        }
-
         return response()->json([
-            'appointment' => $appointment,
+            'success' => true,
+            'message' => 'Appointment retrieved successfully.',
+            'data' => new AppointmentResource(
+                $this->appointmentService->show($request->user(), $appointment_id)
+            ),
         ], 200);
     }
 
     /**
      * Update an appointment (only for pending appointments)
      */
-    public function update(Request $request, $appointment_id)
+    public function update(UpdatePatientAppointmentRequest $request, int $appointment_id): JsonResponse
     {
-        $user = $request->user();
+        $appointment = $this->appointmentService->update(
+            $request->user(),
+            $appointment_id,
+            $request->payload()
+        );
 
-        if ($user->role !== 'Patient') {
-            return response()->json([
-                'message' => 'Only patients can update their appointments',
-            ], 403);
-        }
-
-        $patient = Patient::where('user_id', $user->user_id)->first();
-        if (!$patient) {
-            return response()->json([
-                'message' => 'Patient record not found',
-            ], 404);
-        }
-
-        $appointment = Appointment::where('appointment_id', $appointment_id)
-            ->where('patient_id', $patient->patient_id)
-            ->first();
-
-        if (!$appointment) {
-            return response()->json([
-                'message' => 'Appointment not found',
-            ], 404);
-        }
-
-        // Can only update pending appointments
-        if (!in_array($appointment->status, ['Requested', 'Pending Doctor Approval'])) {
-            return response()->json([
-                'message' => 'Can only update pending appointments',
-            ], 400);
-        }
-
-        $validated = $request->validate([
-            'doctor_id' => 'sometimes|integer|exists:doctors,doctor_id',
-            'appointment_date' => 'sometimes|date|after:now',
-            'notes' => 'nullable|string|max:500',
-        ]);
-
-        DB::beginTransaction();
-
-        try {
-            if (isset($validated['doctor_id']) && $validated['doctor_id'] !== $appointment->doctor_id) {
-                $doctor = Doctor::with('user')->findOrFail($validated['doctor_id']);
-                if ($doctor->user->clinic_id !== $user->clinic_id) {
-                    return response()->json(['message' => 'Doctor does not belong to your clinic'], 400);
-                }
-            }
-
-            if (isset($validated['appointment_date'])) {
-                $doctorId = $validated['doctor_id'] ?? $appointment->doctor_id;
-                $existingAppointment = Appointment::where('doctor_id', $doctorId)
-                    ->where('appointment_date', $validated['appointment_date'])
-                    ->where('appointment_id', '!=', $appointment_id)
-                    ->whereIn('status', ['Requested', 'Pending Doctor Approval', 'Approved'])
-                    ->first();
-
-                if ($existingAppointment) {
-                    throw ValidationException::withMessages([
-                        'appointment_date' => ['This time slot is already booked. Please choose another time.'],
-                    ]);
-                }
-            }
-
-            $appointment->update(array_filter($validated));
-            DB::commit();
-
-            $appointment->load(['doctor.user', 'patient.user', 'clinic']);
-
-            return response()->json([
-                'message' => 'Appointment updated successfully',
-                'appointment' => $appointment,
-            ], 200);
-
-        } catch (ValidationException $e) {
-            DB::rollBack();
-            throw $e;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Failed to update appointment',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Appointment updated successfully.',
+            'data' => new AppointmentResource($appointment),
+        ], 200);
     }
 
     /**
      * Cancel an appointment
      */
-    public function cancel(Request $request, $appointment_id)
+    public function cancel(Request $request, int $appointment_id): JsonResponse
     {
-        $user = $request->user();
-
-        if ($user->role !== 'Patient') {
-            return response()->json([
-                'message' => 'Only patients can cancel their appointments',
-            ], 403);
-        }
-
-        $patient = Patient::where('user_id', $user->user_id)->first();
-        if (!$patient) {
-            return response()->json([
-                'message' => 'Patient record not found',
-            ], 404);
-        }
-
-        $appointment = Appointment::where('appointment_id', $appointment_id)
-            ->where('patient_id', $patient->patient_id)
-            ->first();
-
-        if (!$appointment) {
-            return response()->json([
-                'message' => 'Appointment not found',
-            ], 404);
-        }
-
-        // Can only cancel appointments that are not completed or already cancelled
-        if (in_array($appointment->status, ['Completed', 'Cancelled'])) {
-            return response()->json([
-                'message' => 'Cannot cancel this appointment',
-            ], 400);
-        }
-
-        $appointment->update([
-            'status' => 'Cancelled',
-        ]);
-
         return response()->json([
-            'message' => 'Appointment cancelled successfully',
-            'appointment' => $appointment,
+            'success' => true,
+            'message' => 'Appointment cancelled successfully.',
+            'data' => new AppointmentResource(
+                $this->appointmentService->cancel($request->user(), $appointment_id)
+            ),
         ], 200);
     }
 
     /**
      * Get available doctors for the patient's clinic
      */
-    public function getAvailableDoctors(Request $request)
+    public function getAvailableDoctors(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        if ($user->role !== 'Patient') {
-            return response()->json([
-                'message' => 'Only patients can view available doctors',
-            ], 403);
-        }
-
-        // Get all active doctors in the patient's clinic
-        $doctors = User::where('clinic_id', $user->clinic_id)
-            ->where('role', 'Doctor')
-            ->where('status', 'Active')
-            ->with('doctor')
-            ->get()
-            ->map(function ($user) {
-                return [
-                    'doctor_id' => $user->doctor->doctor_id,
-                    'user_id' => $user->user_id,
-                    'name' => $user->name,
-                    'specialization' => $user->doctor->specialization,
-                    'available_days' => $user->doctor->available_days,
-                    'clinic_room' => $user->doctor->clinic_room,
-                ];
-            });
-
         return response()->json([
-            'doctors' => $doctors,
+            'success' => true,
+            'message' => 'Available doctors retrieved successfully.',
+            'data' => DoctorSummaryResource::collection(
+                $this->appointmentService->availableDoctors($request->user())
+            ),
         ], 200);
     }
 }
