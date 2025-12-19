@@ -34,7 +34,7 @@ class PatientService
         $normalizedPhone = $this->normalizePhoneNumber($data['phone']);
         $this->assertPhoneIsUnique($normalizedPhone);
 
-        $temporaryPassword = Str::random(8);
+        $temporaryPassword = "password";
 
         $patient = $this->database->transaction(function () use ($actor, $data, $normalizedPhone, $temporaryPassword) {
             $patientUser = User::create([
