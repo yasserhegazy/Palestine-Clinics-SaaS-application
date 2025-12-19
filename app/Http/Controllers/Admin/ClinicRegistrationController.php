@@ -9,8 +9,7 @@ use App\Http\Resources\Admin\Clinic\ClinicDetailResource;
 use App\Services\Admin\AdminClinicService;
 use App\Models\Clinic;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+
 
 class ClinicRegistrationController extends Controller
 {
