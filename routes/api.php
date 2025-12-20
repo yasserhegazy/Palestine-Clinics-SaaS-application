@@ -13,6 +13,8 @@ use App\Http\Controllers\Doctor\AppointmentRequestsController;
 use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentController;
 use App\Http\Controllers\Manager\ClinicController as ManagerClinicController;
 use App\Http\Controllers\Secretary\DailyReportController;
+use App\Http\Controllers\Secretary\AppointmentRequestsController as SecretaryAppointmentRequestsController;
+use App\Http\Controllers\Secretary\DashboardController as SecretaryDashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -86,10 +88,21 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor', 'throttle:ap
 
 // Secretary-specific routes
 Route::middleware(['auth:sanctum', 'role:Secretary', 'throttle:api'])->prefix('secretary')->group(function () {
+    // Dashboard
+    Route::get('/dashboard/stats', [SecretaryDashboardController::class, 'stats']);
+    Route::get('/dashboard/today-appointments', [SecretaryDashboardController::class, 'todayAppointments']);
+    Route::get('/dashboard/waiting-room', [SecretaryDashboardController::class, 'waitingRoom']);
+    
     // Daily reports
     Route::get('/reports/daily', [DailyReportController::class, 'dailyReport']);
     Route::get('/reports/appointments-summary', [DailyReportController::class, 'appointmentsSummary']);
     Route::get('/reports/appointments-analytics', [DailyReportController::class, 'appointmentAnalytics']);
+    
+    // Appointment requests (pending approval)
+    Route::get('/appointments/requests', [SecretaryAppointmentRequestsController::class, 'index']);
+    Route::put('/appointments/approve/{appointment_id}', [SecretaryAppointmentRequestsController::class, 'approve'])->middleware('throttle:secretary-actions');
+    Route::put('/appointments/reject/{appointment_id}', [SecretaryAppointmentRequestsController::class, 'reject'])->middleware('throttle:secretary-actions');
+    Route::put('/appointments/reschedule/{appointment_id}', [SecretaryAppointmentRequestsController::class, 'reschedule'])->middleware('throttle:secretary-actions');
 });
 
 Route::middleware(['auth:sanctum', 'role:Doctor', 'throttle:api'])->prefix('doctor')->group(function () {

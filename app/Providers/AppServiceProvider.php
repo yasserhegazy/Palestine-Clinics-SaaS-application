@@ -112,6 +112,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($request->user()?->user_id ?: $request->ip());
         });
 
+        // Secretary appointment actions (approve/reject/reschedule) - 30 per minute
+        RateLimiter::for('secretary-actions', function (Request $request) {
+            return Limit::perMinute(30)->by($request->user()?->user_id ?: $request->ip());
+        });
+
         // Admin actions rate limit (10 per minute)
         RateLimiter::for('admin', function (Request $request) {
             return Limit::perMinute(10)->by($request->user()?->user_id ?: $request->ip())
