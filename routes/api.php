@@ -14,6 +14,7 @@ use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentContro
 use App\Http\Controllers\Manager\ClinicController as ManagerClinicController;
 use App\Http\Controllers\Secretary\DailyReportController;
 use App\Http\Controllers\Secretary\AppointmentRequestsController as SecretaryAppointmentRequestsController;
+use App\Http\Controllers\Secretary\DashboardController as SecretaryDashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -87,6 +88,11 @@ Route::middleware(['auth:sanctum', 'role:Manager,Secretary,Doctor', 'throttle:ap
 
 // Secretary-specific routes
 Route::middleware(['auth:sanctum', 'role:Secretary', 'throttle:api'])->prefix('secretary')->group(function () {
+    // Dashboard
+    Route::get('/dashboard/stats', [SecretaryDashboardController::class, 'stats']);
+    Route::get('/dashboard/today-appointments', [SecretaryDashboardController::class, 'todayAppointments']);
+    Route::get('/dashboard/waiting-room', [SecretaryDashboardController::class, 'waitingRoom']);
+    
     // Daily reports
     Route::get('/reports/daily', [DailyReportController::class, 'dailyReport']);
     Route::get('/reports/appointments-summary', [DailyReportController::class, 'appointmentsSummary']);
