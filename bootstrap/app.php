@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\CheckRoleMiddleware;
+use App\Jobs\DispatchTodayDoctorAppointmentsNotificationsJob;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,6 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         api: __DIR__.'/../routes/api.php',
     )
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->job(new DispatchTodayDoctorAppointmentsNotificationsJob())
+            ->dailyAt('06:00')
+            ->onOneServer();
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         // Replace default CORS middleware with our custom one
         $middleware->remove(\Illuminate\Http\Middleware\HandleCors::class);
