@@ -12,6 +12,7 @@ use App\Http\Controllers\Clinic\Reports\RevenueAnalyticsController;
 use App\Http\Controllers\Doctor\AppointmentRequestsController;
 use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentController;
 use App\Http\Controllers\Manager\ClinicController as ManagerClinicController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Secretary\DailyReportController;
 use App\Http\Controllers\Secretary\AppointmentRequestsController as SecretaryAppointmentRequestsController;
 use App\Http\Controllers\Secretary\DashboardController as SecretaryDashboardController;
@@ -31,6 +32,11 @@ Route::post('/register/clinic', [ClinicRegistrationController::class, 'register'
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{notification_id}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
 });
 
 // Patient routes
