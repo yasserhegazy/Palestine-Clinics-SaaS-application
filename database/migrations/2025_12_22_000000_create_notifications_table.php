@@ -18,7 +18,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['notifiable_id', 'created_at']);
-            $table->unique(['notifiable_type', 'notifiable_id', 'type', 'fingerprint']);
+            $table->unique(['notifiable_type', 'notifiable_id', 'type', 'fingerprint'], 'notif_unique');
         });
     }
 
