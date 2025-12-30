@@ -2,6 +2,7 @@
 
 namespace App\Services\Patient;
 
+use App\Events\Appointments\AppointmentRequested;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Patient;
@@ -32,7 +33,7 @@ class PatientAppointmentService
 
         $this->assertSlotAvailable($data['doctor_id'], $data['appointment_date']);
 
-        return $this->database->transaction(function () use ($actor, $patient, $data) {
+        $appointment = $this->database->transaction(function () use ($actor, $patient, $data) {
             $appointment = Appointment::create([
                 'clinic_id' => $actor->clinic_id,
                 'doctor_id' => $data['doctor_id'],
@@ -45,6 +46,10 @@ class PatientAppointmentService
 
             return $appointment->fresh(['doctor.user', 'patient.user', 'clinic']);
         });
+
+        event(new AppointmentRequested($appointment));
+
+        return $appointment;
     }
 
     /**
