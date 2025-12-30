@@ -17,11 +17,11 @@ class ClinicFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->company() . ' Clinic',
-            'address' => fake()->address(),
-            'phone' => fake()->phoneNumber(),
-            'email' => fake()->unique()->companyEmail(),
-            'subscription_plan' => fake()->randomElement(['Basic', 'Standard', 'Premium']),
+            'name' => $this->faker->company() . ' Clinic',
+            'address' => $this->faker->address(),
+            'phone' => $this->faker->phoneNumber(),
+            'email' => $this->faker->unique()->companyEmail(),
+            'subscription_plan' => $this->faker->randomElement(['Basic', 'Standard', 'Premium']),
             'status' => 'Active',
         ];
     }

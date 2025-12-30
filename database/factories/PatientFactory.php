@@ -17,12 +17,12 @@ class PatientFactory extends Factory
     public function definition(): array
     {
         return [
-            'national_id' => fake()->unique()->numerify('#########'),
-            'date_of_birth' => fake()->date(),
-            'gender' => fake()->randomElement(['Male', 'Female']),
-            'address' => fake()->address(),
-            'blood_type' => fake()->randomElement(['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']),
-            'allergies' => fake()->optional()->words(3, true),
+            'national_id' => $this->faker->unique()->numerify('#########'),
+            'date_of_birth' => $this->faker->date(),
+            'gender' => $this->faker->randomElement(['Male', 'Female']),
+            'address' => $this->faker->address(),
+            'blood_type' => $this->faker->randomElement(['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']),
+            'allergies' => $this->faker->optional()->words(3, true),
         ];
     }
 }

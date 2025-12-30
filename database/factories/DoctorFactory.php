@@ -17,9 +17,9 @@ class DoctorFactory extends Factory
     public function definition(): array
     {
         return [
-            'specialization' => fake()->randomElement(['Cardiology', 'Dermatology', 'Pediatrics', 'Neurology', 'Orthopedics', 'General Practice']),
-            'available_days' => json_encode(fake()->randomElements(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], 3)),
-            'clinic_room' => 'Room ' . fake()->numberBetween(100, 500),
+            'specialization' => $this->faker->randomElement(['Cardiology', 'Dermatology', 'Pediatrics', 'Neurology', 'Orthopedics', 'General Practice']),
+            'available_days' => json_encode($this->faker->randomElements(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], 3)),
+            'clinic_room' => 'Room ' . $this->faker->numberBetween(100, 500),
             'start_time' => '09:00:00',
             'end_time' => '17:00:00',
             'slot_duration' => 30,

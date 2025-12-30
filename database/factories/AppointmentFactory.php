@@ -20,8 +20,8 @@ class AppointmentFactory extends Factory
         return [
             'appointment_date' => $date->format('Y-m-d'),
             'appointment_time' => $date->format('H:i:00'),
-            'status' => fake()->randomElement(['Requested', 'Pending Doctor Approval', 'Approved', 'Cancelled', 'Completed']),
-            'notes' => fake()->sentence(),
+            'status' => $this->faker->randomElement(['Requested', 'Pending Doctor Approval', 'Approved', 'Cancelled', 'Completed']),
+            'notes' => $this->faker->sentence(),
         ];
     }
 }

@@ -17,11 +17,11 @@ class MedicalRecordFactory extends Factory
     public function definition(): array
     {
         return [
-            'visit_date' => fake()->dateTimeBetween('-2 years', 'now'),
-            'symptoms' => fake()->sentence(),
-            'diagnosis' => fake()->sentence(),
-            'prescription' => fake()->sentence(),
-            'next_visit' => fake()->optional()->dateTimeBetween('now', '+6 months'),
+            'visit_date' => $this->faker->dateTimeBetween('-2 years', 'now'),
+            'symptoms' => $this->faker->sentence(),
+            'diagnosis' => $this->faker->sentence(),
+            'prescription' => $this->faker->sentence(),
+            'next_visit' => $this->faker->optional()->dateTimeBetween('now', '+6 months'),
         ];
     }
 }
