@@ -53,6 +53,7 @@ class CorsMiddleware
             'http://127.0.0.1:3001',     // Next.js development alternative
             'https://localhost:3000',     // HTTPS React development
             'https://localhost:3001',     // HTTPS Next.js development
+            'https://palestine-saas-clinics-application.vercel.app', // Production Vercel
         ];
 
         // Add production domains from environment

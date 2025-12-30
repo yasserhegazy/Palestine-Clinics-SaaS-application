@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -29,6 +30,10 @@ class AppServiceProvider extends ServiceProvider
         // Note: Removed manual Event::listen() calls because Laravel 11 auto-discovers
         // listeners based on type-hints in their handle() methods. Manual registration
         // would cause duplicate listener execution.
+
+        // To prevent lazy loading issues, ensure related models are eager loaded
+        Model::preventLazyLoading();
+        Model::automaticallyEagerLoadRelationships();
     }
 
     /**
