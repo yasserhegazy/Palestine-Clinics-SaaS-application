@@ -8,7 +8,7 @@ class RegisterClinicRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->role === 'Admin';
+        return true;
     }
 
     public function rules(): array
@@ -74,3 +74,4 @@ class RegisterClinicRequest extends FormRequest
         return $phone;
     }
 }
+
