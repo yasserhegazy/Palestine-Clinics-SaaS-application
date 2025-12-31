@@ -97,7 +97,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Clinic registration rate limit (3 per hour - very sensitive)
         RateLimiter::for('registration', function (Request $request) {
-            return Limit::perHour(3)->by($request->ip())
+            return Limit::perHour(50)->by($request->ip())
                 ->response(function (Request $request, array $headers) {
                     return response()->json([
                         'message' => 'Too many registration attempts. Please try again later.',
