@@ -12,13 +12,15 @@ class ClinicDetailResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $usersGrouped = $this->whenLoaded('users', function () {
-            return $this->users->groupBy('role');
-        });
+        $usersGrouped = $this->relationLoaded('users')
+            ? $this->users->groupBy('role')
+            : collect();
 
-        $appointments = $this->whenLoaded('appointments');
+        $appointments = $this->relationLoaded('appointments')
+            ? $this->appointments
+            : collect();
 
-        $appointmentStats = $appointments ? [
+        $appointmentStats = $appointments->isNotEmpty() ? [
             'total' => $appointments->count(),
             'requested' => $appointments->where('status', 'Requested')->count(),
             'pending' => $appointments->where('status', 'Pending Doctor Approval')->count(),
@@ -41,17 +43,17 @@ class ClinicDetailResource extends JsonResource
             'status' => $this->status,
             'logo_url' => $this->logo_url ?? null,
             'users' => [
-                'doctors' => $usersGrouped?->get('Doctor', collect())->map($this->mapUser()),
-                'patients' => $usersGrouped?->get('Patient', collect())->map($this->mapUser()),
-                'secretaries' => $usersGrouped?->get('Secretary', collect())->map($this->mapUser()),
-                'managers' => $usersGrouped?->get('Manager', collect())->map($this->mapUser()),
+                'doctors' => $usersGrouped->get('Doctor', collect())->map($this->mapUser()),
+                'patients' => $usersGrouped->get('Patient', collect())->map($this->mapUser()),
+                'secretaries' => $usersGrouped->get('Secretary', collect())->map($this->mapUser()),
+                'managers' => $usersGrouped->get('Manager', collect())->map($this->mapUser()),
             ],
             'user_counts' => [
                 'total' => $this->users()->count(),
-                'doctors' => $usersGrouped?->get('Doctor', collect())->count(),
-                'patients' => $usersGrouped?->get('Patient', collect())->count(),
-                'secretaries' => $usersGrouped?->get('Secretary', collect())->count(),
-                'managers' => $usersGrouped?->get('Manager', collect())->count(),
+                'doctors' => $usersGrouped->get('Doctor', collect())->count(),
+                'patients' => $usersGrouped->get('Patient', collect())->count(),
+                'secretaries' => $usersGrouped->get('Secretary', collect())->count(),
+                'managers' => $usersGrouped->get('Manager', collect())->count(),
                 'active' => $this->users()->where('status', 'Active')->count(),
                 'inactive' => $this->users()->where('status', 'Inactive')->count(),
             ],
