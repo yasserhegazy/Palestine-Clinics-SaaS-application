@@ -1,6 +1,6 @@
 # Palestine Clinics SaaS Application - Backend
 
-A comprehensive SaaS-based clinic management system designed specifically for healthcare facilities in Palestine. This Laravel-based backend provides a complete API for managing multiple clinics, patients, doctors, appointments, and medical records.
+A SaaS-based clinic management system designed specifically for healthcare facilities in Palestine. This Laravel-based backend provides a complete API for managing multiple clinics, patients, doctors, appointments, and medical records.
 
 ## 🎯 Project Overview
 
